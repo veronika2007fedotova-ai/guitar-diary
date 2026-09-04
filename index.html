@@ -37,9 +37,9 @@
 
     <main class="main-content">
       <header class="topbar">
-        <div class="mobile-brand"><span class="brand-dot">✦</span><strong>Гитара <span>с Прокопием</span></strong></div>
-        <div class="welcome"><span class="eyebrow" id="top-date">ПЯТНИЦА, 4 СЕНТЯБРЯ 2026</span><h1>Привет, <span id="greeting-name">Максим</span> <span>👋</span></h1></div>
-        <div class="top-actions"><button class="icon-button" aria-label="Уведомления">♢<i></i></button><span class="avatar" id="user-avatar">МК</span></div>
+        <div class="mobile-top-left"><button class="mobile-menu-button" id="mobile-menu-toggle" type="button" aria-label="Открыть навигацию" aria-expanded="false"><span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span></button><div class="mobile-brand"><span class="brand-dot">✦</span><strong>Гитара <span>с Прокопием</span></strong></div></div>
+        <div class="welcome"><span class="eyebrow" id="top-date">ПЯТНИЦА, 4 СЕНТЯБРЯ 2026</span><h1>Привет, <span id="greeting-name">Максим</span> <span>👋</span></h1><a class="telegram-username top-telegram" id="top-telegram-link" hidden target="_blank" rel="noopener noreferrer"></a></div>
+        <div class="top-actions"><button class="icon-button" type="button" data-view="stats" aria-label="Открыть мой прогресс">♢<i></i></button><button class="avatar avatar-button" id="user-avatar" type="button" data-view="profile" aria-label="Открыть личный кабинет">МК</button></div>
       </header>
 
       <section class="view" id="journal-view">
@@ -49,11 +49,11 @@
           <div class="streak-days" id="streak-days"></div>
         </div>
 
-        <div class="section-heading"><div><span class="eyebrow">ТВОЙ РИТМ</span><h2>Всё под контролем</h2></div><button class="outline-button" id="today-button">Сегодня <span>→</span></button></div>
+        <div class="section-heading"><div><span class="eyebrow">ТВОЙ РИТМ</span><h2>Всё под контролем</h2></div><div class="section-actions"><a class="teacher-inline-link" href="https://t.me/PD_Glazunov" target="_blank" rel="noopener noreferrer">💬 Преподавателю</a><button class="outline-button" id="today-button">Сегодня <span>→</span></button></div></div>
         <div class="stat-grid">
           <article class="stat-card"><div class="stat-top"><span class="stat-label">Занятий в этом месяце</span><span class="stat-symbol orange">◷</span></div><strong id="month-sessions">12</strong><span class="stat-note positive">↑ <b id="month-change">20%</b> к прошлому месяцу</span></article>
           <article class="stat-card"><div class="stat-top"><span class="stat-label">Время за неделю</span><span class="stat-symbol green">◒</span></div><strong><span id="week-minutes">145</span> <em>мин</em></strong><span class="stat-note">Цель: 180 минут</span><div class="progress-bar"><span id="week-progress"></span></div></article>
-          <article class="stat-card quote-card"><div class="quote-mark">“</div><p id="quote">Сначала медленно. Скорость придёт сама.</p><span>— совет преподавателя</span></article>
+          <article class="stat-card quote-card"><div class="quote-mark">“</div><span class="insight-label">ИНСАЙТ ДНЯ</span><span class="insight-meta" id="insight-meta">Сегодня</span><p id="insight-day">На сегодня инсайта нет.</p><div class="insight-card-actions"><button class="insight-link" id="insight-edit" type="button">Добавить инсайт <span>＋</span></button><button class="insight-delete-link" id="insight-delete" type="button" hidden>Удалить</button><button class="insight-link" type="button" data-view="library">Все инсайты <span>→</span></button></div></article>
         </div>
 
         <div class="workspace-grid">
@@ -61,7 +61,7 @@
             <div class="calendar-header"><button class="round-button" id="prev-month" aria-label="Предыдущий месяц">‹</button><div><h3 id="calendar-month">Сентябрь 2026</h3><span id="calendar-caption">Нажми на день, чтобы открыть запись</span></div><button class="round-button" id="next-month" aria-label="Следующий месяц">›</button></div>
             <div class="calendar-weekdays"><span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span></div>
             <div class="calendar-grid" id="calendar-grid"></div>
-            <div class="calendar-legend"><span><i class="legend-dot completed"></i> Есть запись</span><span><i class="legend-dot today"></i> Сегодня</span><span><i class="legend-dot selected"></i> Выбранный день</span></div>
+            <div class="calendar-legend"><span><i class="legend-dot completed"></i> Есть запись</span><span><i class="legend-dot today"></i> Сегодня</span><span><i class="legend-dot selected"></i> Выбранный день</span><span><i class="legend-dot disabled"></i> До старта</span></div>
           </section>
 
           <section class="entry-card panel" id="entry-panel">
@@ -82,13 +82,32 @@
         <section class="recent-section"><div class="section-heading compact"><div><span class="eyebrow">ПОСЛЕДНИЕ ЗАПИСИ</span><h2>Твои занятия</h2></div><button class="text-button" id="show-all">Показать все <span>→</span></button></div><div class="recent-list" id="recent-list"></div><div class="backup-tools"><span>Данные хранятся на этом устройстве</span><div><button class="backup-button" id="export-data">↓ Скачать копию</button><button class="backup-button" id="import-data">↑ Восстановить</button><input type="file" id="import-file" accept="application/json" hidden /></div></div></section>
       </section>
 
-      <section class="view hidden" id="stats-view"><div class="empty-view"><div class="empty-icon">◒</div><span class="eyebrow">ПРОГРЕСС</span><h2>Ритм складывается из дней</h2><p>Заполняй дневник после занятий — здесь появится подробная статистика по времени, сериям и выполненным заданиям.</p><button class="primary-button" data-go-journal>Добавить запись <span>↗</span></button></div></section>
-      <section class="view hidden" id="library-view"><div class="empty-view"><div class="empty-icon">♫</div><span class="eyebrow">МАТЕРИАЛЫ</span><h2>Твоя библиотека скоро здесь</h2><p>Преподаватель сможет добавлять упражнения, видео и полезные заметки для занятий.</p><button class="outline-button" data-go-journal>Вернуться в дневник <span>→</span></button></div></section>
+      <section class="view hidden" id="stats-view">
+        <div class="progress-layout">
+          <div class="section-heading progress-heading"><div><span class="eyebrow">ПРОГРЕСС</span><h2>Ритм складывается из дней</h2><p>Каждая точка — твой прогресс в конкретный день после даты старта.</p></div><button class="outline-button" data-go-journal>← В дневник</button></div>
+          <div class="progress-summary-grid">
+            <article class="progress-stat panel"><span class="stat-label">Средняя результативность</span><strong id="average-progress">0%</strong><small>с учётом времени занятий</small></article>
+            <article class="progress-stat panel"><span class="stat-label">Дней с занятиями</span><strong id="progress-days">0</strong><small>с даты начала</small></article>
+            <article class="progress-stat panel"><span class="stat-label">Время за неделю</span><strong><span id="progress-week-minutes">0</span> <em>мин</em></strong><small>цель: 180 минут</small><div class="progress-bar"><span id="progress-week-bar"></span></div></article>
+          </div>
+          <section class="progress-chart-card panel">
+            <div class="chart-head"><div><span class="eyebrow">ПРОГРЕСС ПО ДНЯМ</span><h3>Последние 14 дней</h3></div><span class="chart-range" id="chart-range">—</span></div>
+            <div class="chart-wrap"><svg id="progress-chart" viewBox="0 0 760 300" role="img" aria-label="График прогресса по дням"></svg><div class="chart-empty" id="progress-empty">Добавь первую запись в дневнике — здесь появится график.</div></div>
+            <div class="chart-legend"><span><i></i> Прогресс занятия</span><span>Шкала: 0–100%</span></div>
+          </section>
+        </div>
+      </section>
+      <section class="view hidden" id="library-view">
+        <div class="materials-layout">
+          <div class="section-heading materials-heading"><div><span class="eyebrow">МАТЕРИАЛЫ ДЛЯ СЕБЯ</span><h2>Инсайты для занятий</h2><p>Добавляй мысли только в те дни, когда они действительно появились.</p></div><div class="section-actions"><button class="teacher-inline-link materials-add-link" id="new-insight" type="button">＋ Добавить инсайт</button><button class="outline-button" data-go-journal>← В дневник</button></div></div>
+          <div class="insight-list" id="insight-list"></div>
+        </div>
+      </section>
       <section class="view hidden" id="profile-view">
         <div class="profile-layout">
           <div class="section-heading profile-heading"><div><span class="eyebrow">ЛИЧНЫЙ КАБИНЕТ</span><h2>Твои данные</h2><p>Имя и дата старта сохраняются только на этом устройстве.</p></div></div>
           <section class="profile-card panel">
-            <div class="profile-card-head"><div class="profile-avatar" id="profile-avatar">МК</div><div><h3>Профиль ученика</h3><span>Настрой календарь под свой путь</span></div></div>
+            <div class="profile-card-head"><div class="profile-avatar" id="profile-avatar">МК</div><div><h3>Профиль ученика</h3><span>Настрой календарь под свой путь</span><a class="telegram-username profile-telegram" id="profile-telegram-link" hidden target="_blank" rel="noopener noreferrer"></a></div></div>
             <form id="profile-form">
               <label class="field-label" for="profile-name">Твоё имя <span>Будет в приветствии</span></label>
               <input class="profile-input" id="profile-name" type="text" maxlength="40" placeholder="Например, Максим" required />
@@ -97,12 +116,41 @@
               <p class="profile-hint">Дни до выбранной даты будут отмечены в календаре как недоступные для записей.</p>
               <div class="form-actions"><button type="button" class="outline-button" data-go-journal>← В дневник</button><button class="primary-button" type="submit">Сохранить профиль <span>↗</span></button></div>
             </form>
+            <a class="teacher-contact-button" href="https://t.me/PD_Glazunov" target="_blank" rel="noopener noreferrer">💬 Написать преподавателю</a>
+            <div class="profile-danger"><div><strong>Новый профиль</strong><span>Очистит записи и начнёт отсчёт с сегодняшней даты.</span></div><button class="danger-button" id="new-profile" type="button">Начать заново</button></div>
           </section>
         </div>
       </section>
     </main>
   </div>
+  <div class="mobile-drawer-scrim hidden" id="mobile-drawer-scrim"></div>
+  <aside class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
+    <div class="mobile-drawer-head">
+      <div class="mobile-drawer-brand"><span class="brand-dot">✦</span><strong>Гитара <span>с Прокопием</span></strong></div>
+      <button class="mobile-drawer-close" id="mobile-drawer-close" type="button" aria-label="Закрыть навигацию">×</button>
+    </div>
+    <nav class="mobile-drawer-nav" aria-label="Мобильная навигация">
+      <button class="nav-item active" data-view="journal" type="button"><span class="nav-icon">▦</span>Мой дневник</button>
+      <button class="nav-item" data-view="stats" type="button"><span class="nav-icon">◒</span>Прогресс</button>
+      <button class="nav-item" data-view="library" type="button"><span class="nav-icon">♫</span>Материалы</button>
+    </nav>
+    <div class="mobile-drawer-foot"><button class="settings" data-view="profile" type="button"><span>◎</span> Личный кабинет</button></div>
+  </aside>
   <div class="toast" id="toast" role="status"></div>
+  <div class="modal-backdrop hidden" id="insight-modal" role="presentation">
+    <section class="insight-modal" role="dialog" aria-modal="true" aria-labelledby="insight-modal-title">
+      <div class="modal-head"><div><span class="eyebrow">МАТЕРИАЛЫ ДЛЯ СЕБЯ</span><h3 id="insight-modal-title">Новый инсайт</h3></div><button class="modal-close" id="insight-modal-close" type="button" aria-label="Закрыть">×</button></div>
+      <form id="insight-form">
+        <label class="field-label" for="insight-date">День инсайта <span>Можно пропускать дни</span></label>
+        <input class="profile-input" id="insight-date" type="date" required />
+        <label class="field-label" for="insight-text">Текст инсайта <span>Поле обязательно</span></label>
+        <textarea class="insight-textarea" id="insight-text" rows="4" maxlength="240" placeholder="Например: расслабленная кисть звучит свободнее..." required></textarea>
+        <p class="profile-hint">Инсайт сохранится только для выбранной даты.</p>
+        <div class="form-actions"><button class="outline-button" id="insight-cancel" type="button">Отмена</button><button class="primary-button" type="submit">Сохранить инсайт <span>↗</span></button></div>
+      </form>
+    </section>
+  </div>
+  <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   <script src="app.js"></script>
 </body>
 </html>

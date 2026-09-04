@@ -1,4 +1,4 @@
-const CACHE_NAME='rifflog-v4';
+const CACHE_NAME='rifflog-v13';
 const ASSETS=['./','./index.html','./styles.css','./app.js','./manifest.json','./icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
