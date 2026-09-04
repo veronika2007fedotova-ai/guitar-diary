@@ -251,6 +251,9 @@ function selectDate(date){ if(toKey(date)<profile.startDate){ showToast('Это�
 function renderForm(){
   const key=toKey(selectedDate), entry=entries[key]||{};
   el('entry-date').textContent = key===todayKey ? `Сегодня, ${formatDate(selectedDate)}` : `${WEEKDAYS[selectedDate.getDay()]}, ${formatDate(selectedDate)}`;
+  const previewDate=el('mobile-entry-preview-date'), previewText=el('mobile-entry-preview-text');
+  if(previewDate) previewDate.textContent=key===todayKey ? `Сегодня, ${formatDate(selectedDate)}` : `${WEEKDAYS[selectedDate.getDay()]}, ${formatDate(selectedDate)}`;
+  if(previewText){ previewText.textContent=entry.assignment||'Нажми, чтобы добавить задание'; previewText.classList.toggle('empty',!entry.assignment); }
   el('assignment').value=entry.assignment||''; el('minutes').value=entry.minutes||''; el('progress').value=entry.progress ?? 60; el('progress-output').value=`${entry.progress ?? 60}%`; el('progress-output').textContent=`${entry.progress ?? 60}%`; el('completed').checked=!!entry.completed;
   el('entry-status').textContent=entry.assignment ? 'ЗАПИСЬ СОХРАНЕНА' : 'НОВАЯ ЗАПИСЬ'; el('entry-status').classList.toggle('saved',!!entry.assignment); updateRange();
 }

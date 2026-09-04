@@ -7,7 +7,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>Гитара с Прокопием — дневник занятий</title>
-  <link rel="stylesheet" href="styles.css?v=27" />
+  <link rel="stylesheet" href="styles.css?v=28" />
 </head>
 <body>
   <div class="app-shell">
@@ -63,8 +63,13 @@
             <div class="calendar-header"><button class="round-button" id="prev-month" aria-label="Предыдущий месяц">‹</button><div><h3 id="calendar-month">Сентябрь 2026</h3><span id="calendar-caption">Нажми на день, чтобы открыть запись</span></div><button class="round-button" id="next-month" aria-label="Следующий месяц">›</button></div>
             <div class="calendar-weekdays"><span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span></div>
             <div class="calendar-grid" id="calendar-grid"></div>
-             <div class="calendar-legend"><span><i class="legend-dot completed"></i> Есть запись</span><span><i class="legend-dot today"></i> Сегодня</span><span><i class="legend-dot selected"></i> Выбранный день</span><span><i class="legend-dot disabled"></i> До старта</span></div><button class="outline-button mobile-entry-open-button" id="mobile-entry-open" type="button">Заполнить запись <span>↗</span></button>
+             <div class="calendar-legend"><span><i class="legend-dot completed"></i> Есть запись</span><span><i class="legend-dot today"></i> Сегодня</span><span><i class="legend-dot selected"></i> Выбранный день</span><span><i class="legend-dot disabled"></i> До старта</span></div>
           </section>
+
+          <button class="mobile-entry-preview" id="mobile-entry-open" type="button">
+            <span class="mobile-entry-preview-copy"><span class="eyebrow">ДНЕВНИК</span><strong id="mobile-entry-preview-date">Сегодня, 4 сентября</strong><span class="mobile-entry-preview-task"><b>Домашнее задание</b><em id="mobile-entry-preview-text">Нажми, чтобы добавить задание</em></span></span>
+            <span class="mobile-entry-preview-arrow">Открыть <span>↗</span></span>
+          </button>
 
           <section class="entry-card panel" id="entry-panel">
             <div class="entry-head"><div><span class="eyebrow">ДНЕВНИК</span><h3 id="entry-date">Сегодня, 4 сентября</h3></div><div class="entry-head-actions"><span class="entry-status" id="entry-status">НОВАЯ ЗАПИСЬ</span><button class="text-button mobile-entry-close" id="mobile-entry-close" type="button">Закрыть</button></div></div>
@@ -263,6 +268,6 @@
     </section>
   </div>
   <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
-  <script src="app.js?v=28"></script>
+  <script src="app.js?v=29"></script>
 </body>
 </html>
