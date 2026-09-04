@@ -7,7 +7,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>Гитара с Прокопием — дневник занятий</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=26" />
 </head>
 <body>
   <div class="app-shell">
@@ -23,6 +23,8 @@
         <button class="nav-item active" data-view="journal"><span class="nav-icon">▦</span>Мой дневник</button>
         <button class="nav-item" data-view="stats"><span class="nav-icon">◒</span>Прогресс</button>
         <button class="nav-item" data-view="library"><span class="nav-icon">♫</span>Материалы</button>
+        <button class="nav-item" data-view="test"><span class="nav-icon">🧠</span>Слова</button>
+        <button class="nav-item" data-view="chords"><span class="nav-icon">🎸</span>Аккорды</button>
       </nav>
 
       <div class="sidebar-tip">
@@ -52,7 +54,7 @@
         <div class="section-heading"><div><span class="eyebrow">ТВОЙ РИТМ</span><h2>Всё под контролем</h2></div><div class="section-actions"><a class="teacher-inline-link" href="https://t.me/PD_Glazunov" target="_blank" rel="noopener noreferrer">💬 Преподавателю</a><button class="outline-button" id="today-button">Сегодня <span>→</span></button></div></div>
         <div class="stat-grid">
           <article class="stat-card"><div class="stat-top"><span class="stat-label">Занятий в этом месяце</span><span class="stat-symbol orange">◷</span></div><strong id="month-sessions">12</strong><span class="stat-note positive">↑ <b id="month-change">20%</b> к прошлому месяцу</span></article>
-          <article class="stat-card"><div class="stat-top"><span class="stat-label">Время за неделю</span><span class="stat-symbol green">◒</span></div><strong><span id="week-minutes">145</span> <em>мин</em></strong><span class="stat-note">Цель: 180 минут</span><div class="progress-bar"><span id="week-progress"></span></div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Время за неделю</span><span class="stat-symbol green">◒</span></div><strong><span id="week-minutes">145</span> <em>мин</em></strong><div class="weekly-goal-line"><span class="stat-note">Цель: <strong id="weekly-goal-display">180</strong> мин</span><button class="text-button weekly-goal-edit" id="weekly-goal-edit" type="button">Изменить цель</button></div><div class="progress-bar"><span id="week-progress"></span></div></article>
           <article class="stat-card quote-card"><div class="quote-mark">“</div><span class="insight-label">ИНСАЙТ ДНЯ</span><span class="insight-meta" id="insight-meta">Сегодня</span><p id="insight-day">На сегодня инсайта нет.</p><div class="insight-card-actions"><button class="insight-link" id="insight-edit" type="button">Добавить инсайт <span>＋</span></button><button class="insight-delete-link" id="insight-delete" type="button" hidden>Удалить</button><button class="insight-link" type="button" data-view="library">Все инсайты <span>→</span></button></div></article>
         </div>
 
@@ -88,7 +90,7 @@
           <div class="progress-summary-grid">
             <article class="progress-stat panel"><span class="stat-label">Средняя результативность</span><strong id="average-progress">0%</strong><small>с учётом времени занятий</small></article>
             <article class="progress-stat panel"><span class="stat-label">Дней с занятиями</span><strong id="progress-days">0</strong><small>с даты начала</small></article>
-            <article class="progress-stat panel"><span class="stat-label">Время за неделю</span><strong><span id="progress-week-minutes">0</span> <em>мин</em></strong><small>цель: 180 минут</small><div class="progress-bar"><span id="progress-week-bar"></span></div></article>
+            <article class="progress-stat panel"><span class="stat-label">Время за неделю</span><strong><span id="progress-week-minutes">0</span> <em>мин</em></strong><small>цель: <span id="progress-week-goal">180</span> минут</small><div class="progress-bar"><span id="progress-week-bar"></span></div></article>
           </div>
           <section class="progress-chart-card panel">
             <div class="chart-head"><div><span class="eyebrow">ПРОГРЕСС ПО ДНЯМ</span><h3>Последние 14 дней</h3></div><span class="chart-range" id="chart-range">—</span></div>
@@ -101,6 +103,102 @@
         <div class="materials-layout">
           <div class="section-heading materials-heading"><div><span class="eyebrow">МАТЕРИАЛЫ ДЛЯ СЕБЯ</span><h2>Инсайты для занятий</h2><p>Добавляй мысли только в те дни, когда они действительно появились.</p></div><div class="section-actions"><button class="teacher-inline-link materials-add-link" id="new-insight" type="button">＋ Добавить инсайт</button><button class="outline-button" data-go-journal>← В дневник</button></div></div>
           <div class="insight-list" id="insight-list"></div>
+        </div>
+      </section>
+      <section class="view hidden" id="test-view">
+        <div class="test-layout">
+          <div class="section-heading test-heading"><div><span class="eyebrow">СЛОВА И ТЕСТ</span><h2>Термины для гитариста</h2><p>Собирай свою библиотеку и проверяй, что уже запомнилось.</p></div><button class="outline-button" data-go-journal>← В дневник</button></div>
+          <div class="test-mode-switch" role="tablist" aria-label="Режим тренировки">
+            <button class="test-mode-tab active" type="button" role="tab" aria-selected="true" data-test-mode="library">📚 Библиотека</button>
+            <button class="test-mode-tab" type="button" role="tab" aria-selected="false" data-test-mode="quiz">🧠 Тест</button>
+            <button class="test-mode-tab" type="button" role="tab" aria-selected="false" data-test-mode="word-stats">📊 Статистика</button>
+          </div>
+
+          <section class="test-mode-panel test-library-panel" id="test-library-panel" role="tabpanel">
+            <div class="test-library-grid">
+              <section class="term-form-card panel">
+                <div class="test-card-heading"><div><span class="eyebrow">МОЯ БИБЛИОТЕКА</span><h3 id="term-form-title">Добавить термин</h3></div><span class="test-card-icon">＋</span></div>
+                <form id="term-form">
+                  <label class="field-label" for="term-word">Слово / термин <span>Например, arpeggio</span></label>
+                  <input class="profile-input" id="term-word" type="text" maxlength="80" placeholder="arpeggio" required />
+                  <label class="field-label" for="term-meaning">Значение <span>Коротко и понятно</span></label>
+                  <textarea class="test-textarea" id="term-meaning" rows="4" maxlength="240" placeholder="перебор струн" required></textarea>
+                  <label class="field-label" for="term-category">Категория <span>Необязательно</span></label>
+                  <input class="profile-input" id="term-category" type="text" maxlength="40" placeholder="Например, техника" list="term-category-options" />
+                  <datalist id="term-category-options"><option value="Техника"></option><option value="Теория"></option><option value="Музыкальные термины"></option><option value="Ноты"></option><option value="Аккорды"></option><option value="Другое"></option></datalist>
+                  <div class="form-actions term-form-actions"><button class="outline-button hidden" id="cancel-term-edit" type="button">Отмена</button><button class="primary-button" id="term-submit" type="submit">Добавить <span>↗</span></button></div>
+                </form>
+              </section>
+              <section class="terms-card panel">
+                <div class="test-card-heading"><div><span class="eyebrow">СЛОВА УЧЕНИКА</span><h3>Твои термины</h3></div><span class="terms-count" id="terms-count">0</span></div>
+                <label class="term-search"><span>🔎</span><input id="term-search" type="search" placeholder="Поиск термина или значения..." aria-label="Поиск термина или значения" /></label><div class="term-list-toolbar"><span id="term-filter-label">Все термины</span><button class="text-button hidden" id="term-filter-clear" type="button">Показать все</button></div>
+                <div class="terms-list" id="terms-list"></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="test-mode-panel quiz-panel hidden" id="quiz-panel" role="tabpanel">
+            <div class="quiz-screen" id="quiz-start">
+              <div class="quiz-intro"><span class="quiz-icon">🧠</span><span class="eyebrow">ГОТОВ К ТРЕНИРОВКЕ?</span><h3>Проверь себя</h3><p>Напиши значение термина своими словами. Варианты ответа не подсказываются.</p></div>
+              <div class="quiz-ready" id="quiz-ready-state">
+                <div class="quiz-library-summary"><span>В библиотеке</span><strong><span id="quiz-term-count">0</span> <em>терминов</em></strong><small><span id="quiz-difficult-count">0</span> сложных слов ждут повторения</small></div>
+                <div class="quiz-choice-heading"><span class="eyebrow">ЧТО БУДЕМ ПОВТОРЯТЬ?</span><span>Порядок будет случайным</span></div>
+                <div class="quiz-filter-options"><button class="quiz-filter active" type="button" data-quiz-filter="all">Все слова</button><button class="quiz-filter" type="button" data-quiz-filter="new">Новые</button><button class="quiz-filter" type="button" data-quiz-filter="review">На повторение</button><button class="quiz-filter" type="button" data-quiz-filter="difficult">Сложные</button></div>
+                <div class="quiz-choice-heading quiz-size-heading"><span class="eyebrow">КОЛИЧЕСТВО</span><span>Если слов меньше — возьмём все</span></div>
+                <div class="quiz-options"><button class="quiz-option active" type="button" data-quiz-size="all"><strong>Все слова</strong><span>Вся библиотека</span></button><button class="quiz-option" type="button" data-quiz-size="5"><strong>5 слов</strong><span>Короткая тренировка</span></button><button class="quiz-option" type="button" data-quiz-size="10"><strong>10 слов</strong><span>Средняя тренировка</span></button><button class="quiz-option" type="button" data-quiz-size="20"><strong>20 слов</strong><span>Полная тренировка</span></button></div>
+                <button class="primary-button quiz-start-button" id="quiz-start-button" type="button">Начать тест <span>↗</span></button>
+                <button class="outline-button quiz-repeat-button" id="quiz-repeat-difficult" type="button" hidden>🔁 Повторить сложные <span id="quiz-repeat-count"></span></button>
+              </div>
+              <div class="quiz-empty hidden" id="quiz-empty-state"><strong>Библиотека пока пуста</strong><p>Добавь первые термины, чтобы начать тренировку.</p><button class="primary-button" type="button" data-test-mode="library">＋ Добавить термин <span>↗</span></button></div>
+            </div>
+            <div class="quiz-screen hidden" id="quiz-question">
+              <div class="quiz-progress-head"><span>Вопрос <strong id="quiz-current">1</strong> из <strong id="quiz-total">1</strong></span><div class="quiz-score"><span>✓ <b id="quiz-correct">0</b></span><span>× <b id="quiz-incorrect">0</b></span></div></div>
+              <div class="quiz-question-card"><span class="eyebrow">ЧТО ОЗНАЧАЕТ ЭТОТ ТЕРМИН?</span><h3 id="quiz-word">ARPEGGIO</h3><label class="field-label" for="quiz-answer">Твоё значение <span>Ответ своими словами</span></label><textarea class="test-textarea quiz-answer" id="quiz-answer" rows="5" maxlength="300" placeholder="Введите значение..."></textarea><button class="primary-button quiz-check-button" id="quiz-check" type="button">Проверить <span>↗</span></button><div class="quiz-feedback hidden" id="quiz-feedback" role="status"></div><button class="outline-button quiz-self-correct hidden" id="quiz-self-correct" type="button">Я ответил верно</button><button class="outline-button quiz-next-button hidden" id="quiz-next" type="button">Следующее слово <span>→</span></button></div>
+            </div>
+            <div class="quiz-screen hidden" id="quiz-result">
+              <div class="quiz-result-card"><span class="quiz-result-icon">✦</span><span class="eyebrow">ТРЕНИРОВКА ЗАКОНЧЕНА</span><h3>Тест завершён</h3><p>Правильных ответов: <strong><span id="quiz-result-correct">0</span> из <span id="quiz-result-total">0</span></strong></p><div class="quiz-result-percent" id="quiz-result-percent">0%</div><span class="quiz-result-caption">Результат</span><div class="quiz-result-metrics"><span>🔥 Правильных подряд: <strong id="quiz-result-streak">0</strong></span><span>📚 Повторено терминов: <strong id="quiz-result-reviewed">0</strong></span><span>❌ Ошибок: <strong id="quiz-result-incorrect">0</strong></span></div><div class="quiz-missed hidden" id="quiz-missed"><strong>Стоит повторить:</strong><div id="quiz-missed-list"></div></div><button class="primary-button" id="quiz-repeat-errors" type="button" hidden>🔁 Повторить ошибки</button><button class="outline-button" id="quiz-retry" type="button">Пройти ещё раз <span>↗</span></button><button class="text-button quiz-result-library" type="button" data-test-mode="library">Вернуться в библиотеку <span>→</span></button></div>
+            </div>
+          </section>
+          <section class="test-mode-panel word-stats-panel hidden" id="word-stats-panel" role="tabpanel">
+            <div class="word-stats-grid"><button class="word-stat-card panel" type="button" data-word-category="all"><span>📚 Всего терминов</span><strong id="word-stat-total">0</strong></button><button class="word-stat-card panel" type="button" data-word-category="known"><span>🟢 Знаю сегодня</span><strong id="word-stat-known">0</strong></button><button class="word-stat-card panel" type="button" data-word-category="learning"><span>🟡 Изучаю сегодня</span><strong id="word-stat-learning">0</strong></button><button class="word-stat-card panel" type="button" data-word-category="difficult"><span>🔴 Сложные сегодня</span><strong id="word-stat-difficult">0</strong></button></div>
+            <div class="word-progress-card panel"><div class="test-card-heading"><div><span class="eyebrow">ПРОГРЕСС</span><h3>Освоено <span id="word-progress-known">0</span> из <span id="word-progress-total">0</span> терминов</h3></div><strong id="word-progress-percent">0%</strong></div><div class="word-progress-bar"><span id="word-progress-bar"></span></div></div>
+            <div class="word-stats-columns"><section class="word-period-card panel"><div class="test-card-heading"><div><span class="eyebrow">СЕГОДНЯ</span><h3>Дневная активность</h3></div><span class="test-card-icon">📅</span></div><div class="word-period-values"><div><strong id="word-today-reviewed">0</strong><span>Повторено терминов</span></div><div><strong id="word-today-correct">0</strong><span>Правильных</span></div><div><strong id="word-today-accuracy">0%</strong><span>Точность</span></div></div></section><section class="word-period-card panel"><div class="test-card-heading"><div><span class="eyebrow">ТЕКУЩИЙ МЕСЯЦ</span><h3>Итог по дням</h3></div><span class="test-card-icon">▦</span></div><div class="word-period-values word-period-all"><div><strong id="word-month-tests">0</strong><span>Всего тестов</span></div><div><strong id="word-month-answers">0</strong><span>Всего ответов</span></div><div><strong id="word-month-accuracy">0%</strong><span>Средняя точность</span></div></div></section><section class="word-period-card panel"><div class="test-card-heading"><div><span class="eyebrow">ЗА ВСЁ ВРЕМЯ</span><h3>Результаты</h3></div><span class="test-card-icon">◒</span></div><div class="word-period-values word-period-all"><div><strong id="word-all-tests">0</strong><span>Всего тестов</span></div><div><strong id="word-all-answers">0</strong><span>Всего ответов</span></div><div><strong id="word-all-accuracy">0%</strong><span>Средняя точность</span></div></div></section></div>
+          </section>
+        </div>
+      </section>
+      <section class="view hidden" id="chords-view">
+        <div class="chords-layout">
+          <div class="section-heading chords-heading"><div><span class="eyebrow">МОИ ПЕСНИ</span><h2>Песни и аккорды</h2><p>Сохраняй тексты любимых песен и держи аккорды прямо над ними.</p></div><button class="outline-button" data-go-journal>← В дневник</button></div>
+          <div class="chords-library-grid">
+            <section class="song-form-card panel">
+              <div class="test-card-heading"><div><span class="eyebrow">БИБЛИОТЕКА ПЕСЕН</span><h3 id="song-form-title">Добавить песню</h3></div><span class="test-card-icon">🎸</span></div>
+              <form id="song-form">
+                <label class="field-label" for="song-title">Название песни <span>Например, Knockin' on Heaven's Door</span></label>
+                <input class="profile-input" id="song-title" type="text" maxlength="120" placeholder="Название песни" required />
+                <label class="field-label" for="song-artist">Исполнитель <span>Необязательно</span></label>
+                <input class="profile-input" id="song-artist" type="text" maxlength="100" placeholder="Исполнитель или автор" />
+                <label class="field-label" for="song-chords">Аккорды над текстом <span>Например, Am · F · C · G</span></label>
+                <textarea class="song-chords-input" id="song-chords" rows="3" maxlength="500" placeholder="Am        F        C        G" required></textarea>
+                <p class="profile-hint song-form-hint">Можно записать несколько строк аккордов — они будут показаны сверху.</p>
+                <label class="field-label" for="song-lyrics">Текст песни <span>Переносы строк сохранятся</span></label>
+                <textarea class="test-textarea song-lyrics-input" id="song-lyrics" rows="10" maxlength="12000" placeholder="Вставь сюда текст песни..." required></textarea>
+                <div class="form-actions term-form-actions"><button class="outline-button hidden" id="cancel-song-edit" type="button">Отмена</button><button class="primary-button" id="song-submit" type="submit">Добавить песню <span>↗</span></button></div>
+              </form>
+            </section>
+            <section class="songs-card panel">
+              <div class="test-card-heading"><div><span class="eyebrow">МОЯ БИБЛИОТЕКА</span><h3>Сохранённые песни</h3></div><span class="terms-count" id="songs-count">0</span></div>
+              <div id="songs-library-panel">
+                <label class="song-search"><span>🔎</span><input id="song-search" type="search" placeholder="Поиск по названию, автору или тексту..." aria-label="Поиск песни" /></label>
+                <div class="songs-list" id="songs-list"></div>
+              </div>
+              <section class="song-detail hidden" id="song-detail-panel" aria-live="polite">
+                <div class="song-detail-top"><button class="text-button" id="song-detail-back" type="button">← Все песни</button><div class="song-detail-actions"><div class="song-font-controls" aria-label="Размер текста песни"><span>Размер текста</span><button type="button" id="song-font-decrease" aria-label="Уменьшить шрифт">A−</button><output id="song-font-size-value">100%</output><button type="button" id="song-font-increase" aria-label="Увеличить шрифт">A+</button></div><button class="outline-button" id="song-detail-edit" type="button">Редактировать</button></div></div>
+                <div class="song-detail-title"><span class="eyebrow">ПЕСНЯ</span><h3 id="song-detail-title">Название песни</h3><span id="song-detail-artist" class="song-artist"></span></div>
+                <div class="song-chord-display"><span class="eyebrow">АККОРДЫ</span><pre id="song-detail-chords"></pre></div>
+                <div class="song-lyrics-display"><span class="eyebrow">ТЕКСТ ПЕСНИ</span><pre id="song-detail-lyrics"></pre></div>
+              </section>
+            </section>
+          </div>
         </div>
       </section>
       <section class="view hidden" id="profile-view">
@@ -133,6 +231,8 @@
       <button class="nav-item active" data-view="journal" type="button"><span class="nav-icon">▦</span>Мой дневник</button>
       <button class="nav-item" data-view="stats" type="button"><span class="nav-icon">◒</span>Прогресс</button>
       <button class="nav-item" data-view="library" type="button"><span class="nav-icon">♫</span>Материалы</button>
+      <button class="nav-item" data-view="test" type="button"><span class="nav-icon">🧠</span>Слова</button>
+      <button class="nav-item" data-view="chords" type="button"><span class="nav-icon">🎸</span>Аккорды</button>
     </nav>
     <div class="mobile-drawer-foot"><button class="settings" data-view="profile" type="button"><span>◎</span> Личный кабинет</button></div>
   </aside>
@@ -150,7 +250,18 @@
       </form>
     </section>
   </div>
+  <div class="modal-backdrop hidden" id="weekly-goal-modal" role="presentation">
+    <section class="insight-modal weekly-goal-modal" role="dialog" aria-modal="true" aria-labelledby="weekly-goal-modal-title">
+      <div class="modal-head"><div><span class="eyebrow">НЕДЕЛЬНАЯ ЦЕЛЬ</span><h3 id="weekly-goal-modal-title">Изменить цель</h3></div><button class="modal-close" id="weekly-goal-modal-close" type="button" aria-label="Закрыть">×</button></div>
+      <form id="weekly-goal-form">
+        <label class="field-label" for="weekly-goal-editor">Минут в неделю <span>Например, 180</span></label>
+        <input class="profile-input" id="weekly-goal-editor" type="number" min="1" max="10000" step="1" inputmode="numeric" required />
+        <p class="profile-hint">Цель сохранится на этом устройстве и обновит обе шкалы прогресса.</p>
+        <div class="form-actions"><button class="outline-button" id="weekly-goal-cancel" type="button">Отмена</button><button class="primary-button" type="submit">Сохранить цель <span>↗</span></button></div>
+      </form>
+    </section>
+  </div>
   <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=27"></script>
 </body>
 </html>
