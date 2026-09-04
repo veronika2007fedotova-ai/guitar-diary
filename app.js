@@ -247,7 +247,7 @@ function renderCalendar(){
     grid.appendChild(button);
   }
 }
-function selectDate(date){ if(toKey(date)<profile.startDate){ showToast('Этот день был до начала занятий'); return; } selectedDate = new Date(date); if(date.getMonth()!==calendarDate.getMonth()) calendarDate = new Date(date.getFullYear(),date.getMonth(),1); renderCalendar(); renderForm(); }
+function selectDate(date){ if(toKey(date)<profile.startDate){ showToast('Этот день был до начала занятий'); return; } selectedDate = new Date(date); if(date.getMonth()!==calendarDate.getMonth()) calendarDate = new Date(date.getFullYear(),date.getMonth(),1); renderCalendar(); renderForm(); if(window.matchMedia('(max-width:700px)').matches) openMobileEntry(); }
 function renderForm(){
   const key=toKey(selectedDate), entry=entries[key]||{};
   el('entry-date').textContent = key===todayKey ? `Сегодня, ${formatDate(selectedDate)}` : `${WEEKDAYS[selectedDate.getDay()]}, ${formatDate(selectedDate)}`;
@@ -275,7 +275,13 @@ function calcStats(){
   renderProgress();
 }
 function showToast(message){ const toast=el('toast'); toast.textContent=message; toast.classList.add('show'); clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.classList.remove('show'),2200); }
-function switchView(view){ document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden')); el(`${view}-view`).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view)); if(view==='stats') renderProgress(); if(view==='test'){ renderTerms(); renderWordStats(); } if(view==='chords') renderSongs(); }
+function switchView(view){ if(view!=='journal') closeMobileEntry(); document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden')); el(`${view}-view`).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view)); if(view==='stats') renderProgress(); if(view==='test'){ renderTerms(); renderWordStats(); } if(view==='chords') renderSongs(); }
+function setMobileEntry(open){
+  const entry=el('entry-panel'), backdrop=el('mobile-entry-backdrop'); if(!entry||!backdrop) return;
+  entry.classList.toggle('mobile-entry-open',open); backdrop.classList.toggle('hidden',!open); backdrop.classList.toggle('open',open); document.body.classList.toggle('mobile-entry-locked',open);
+}
+function openMobileEntry(){ setMobileEntry(true); }
+function closeMobileEntry(){ setMobileEntry(false); }
 function setMobileDrawer(open){
   const drawer=el('mobile-drawer'), scrim=el('mobile-drawer-scrim'), toggle=el('mobile-menu-toggle');
   if(!drawer || !scrim) return;
@@ -535,7 +541,7 @@ function renderProgress(){
   renderWeeklyGoal();
 }
 
-el('entry-form').addEventListener('submit',e=>{ e.preventDefault(); const key=toKey(selectedDate); if(key<profile.startDate){ showToast('Выбери день начиная с даты старта'); return; } const assignment=el('assignment').value.trim(); if(!assignment && !el('minutes').value){ showToast('Добавь задание или время занятия'); return; } entries[key]={assignment,minutes:Number(el('minutes').value)||0,progress:Number(el('progress').value)||0,completed:el('completed').checked}; saveEntries(); renderCalendar(); renderForm(); renderRecent(); calcStats(); showToast('Запись сохранена'); });
+el('entry-form').addEventListener('submit',e=>{ e.preventDefault(); const key=toKey(selectedDate); if(key<profile.startDate){ showToast('Выбери день начиная с даты старта'); return; } const assignment=el('assignment').value.trim(); if(!assignment && !el('minutes').value){ showToast('Добавь задание или время занятия'); return; } entries[key]={assignment,minutes:Number(el('minutes').value)||0,progress:Number(el('progress').value)||0,completed:el('completed').checked}; saveEntries(); renderCalendar(); renderForm(); renderRecent(); calcStats(); closeMobileEntry(); showToast('Запись сохранена'); });
 el('delete-entry').addEventListener('click',()=>{ const key=toKey(selectedDate); if(!entries[key]){ showToast('В этот день ещё нет записи'); return; } removeEntry(key); });
 el('progress').addEventListener('input',updateRange);
 el('weekly-goal-edit').addEventListener('click',openWeeklyGoalModal);
@@ -545,7 +551,7 @@ el('weekly-goal-modal').addEventListener('click',event=>{ if(event.target.id==='
 el('weekly-goal-form').addEventListener('submit',event=>{ event.preventDefault(); if(!updateWeeklyGoal(el('weekly-goal-editor').value)){ showToast('Цель должна быть не меньше 1 минуты'); el('weekly-goal-editor').focus(); return; } closeWeeklyGoalModal(); showToast('Цель недели обновлена'); });
 el('prev-month').addEventListener('click',()=>{ calendarDate.setMonth(calendarDate.getMonth()-1); renderCalendar(); });
 el('next-month').addEventListener('click',()=>{ calendarDate.setMonth(calendarDate.getMonth()+1); renderCalendar(); });
-el('today-button').addEventListener('click',()=>{ selectedDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()); calendarDate=new Date(now.getFullYear(),now.getMonth(),1); renderCalendar(); renderForm(); });
+el('today-button').addEventListener('click',()=>{ selectedDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()); calendarDate=new Date(now.getFullYear(),now.getMonth(),1); renderCalendar(); renderForm(); if(window.matchMedia('(max-width:700px)').matches) openMobileEntry(); });
 el('show-all').addEventListener('click',()=>{ document.querySelector('.recent-section').scrollIntoView({behavior:'smooth'}); });
 document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{ if(btn.dataset.view==='profile') renderProfile(); switchView(btn.dataset.view); if(btn.closest('.mobile-drawer')) closeMobileDrawer(); }));
 document.querySelectorAll('[data-go-journal]').forEach(btn=>btn.addEventListener('click',()=>switchView('journal')));
@@ -600,7 +606,10 @@ el('quiz-retry').addEventListener('click',()=>startQuiz(quizState.selection,quiz
 el('mobile-menu-toggle').addEventListener('click',()=>setMobileDrawer(true));
 el('mobile-drawer-close').addEventListener('click',closeMobileDrawer);
 el('mobile-drawer-scrim').addEventListener('click',closeMobileDrawer);
-document.addEventListener('keydown',event=>{ if(event.key==='Escape'){ closeMobileDrawer(); closeWeeklyGoalModal(); } });
+el('mobile-entry-open').addEventListener('click',openMobileEntry);
+el('mobile-entry-close').addEventListener('click',closeMobileEntry);
+el('mobile-entry-backdrop').addEventListener('click',closeMobileEntry);
+document.addEventListener('keydown',event=>{ if(event.key==='Escape'){ closeMobileDrawer(); closeMobileEntry(); closeWeeklyGoalModal(); } });
 el('insight-edit').addEventListener('click',()=>openInsightModal(todayKey));
 el('insight-delete').addEventListener('click',()=>removeInsight(todayKey));
 el('new-insight').addEventListener('click',()=>{ const selectedKey=toKey(selectedDate); openInsightModal(selectedKey>=profile.startDate?selectedKey:todayKey); });
