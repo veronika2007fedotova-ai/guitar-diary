@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0c0d10" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <title>Гитара с Прокопием — дневник занятий</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><path d="M19.7 4.6c1.7-1.7 4.6-1.7 6.3 0l1.4 1.4c1.7 1.7 1.7 4.6 0 6.3l-9.7 9.7-6.3-6.3 8.3-8.3Z" stroke="currentColor" stroke-width="2.2"/><path d="m12.1 15.7-4 4m8.5-8.5-4 4M8.2 22.4l-2.7 2.7m13.3-8.3-3 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="m4.5 27.5 4-1 1-4-4 1-1 4Z" fill="currentColor"/></svg>
+        </div>
+        <div><strong>Гитара <span>с Прокопием</span></strong><small>дневник занятий</small></div>
+      </div>
+
+      <nav class="main-nav" aria-label="Основная навигация">
+        <button class="nav-item active" data-view="journal"><span class="nav-icon">▦</span>Мой дневник</button>
+        <button class="nav-item" data-view="stats"><span class="nav-icon">◒</span>Прогресс</button>
+        <button class="nav-item" data-view="library"><span class="nav-icon">♫</span>Материалы</button>
+      </nav>
+
+      <div class="sidebar-tip">
+        <div class="tip-icon">✦</div>
+        <p><strong>Маленький шаг каждый день</strong><br><span>10 минут сегодня лучше, чем час когда-нибудь.</span></p>
+      </div>
+
+      <div class="sidebar-bottom">
+        <button class="settings" type="button" data-view="profile"><span>◎</span> Личный кабинет</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-dot">✦</span><strong>Гитара <span>с Прокопием</span></strong></div>
+        <div class="welcome"><span class="eyebrow" id="top-date">ПЯТНИЦА, 4 СЕНТЯБРЯ 2026</span><h1>Привет, <span id="greeting-name">Максим</span> <span>👋</span></h1></div>
+        <div class="top-actions"><button class="icon-button" aria-label="Уведомления">♢<i></i></button><span class="avatar" id="user-avatar">МК</span></div>
+      </header>
+
+      <section class="view" id="journal-view">
+        <div class="streak-banner">
+          <div class="streak-flame">✦</div>
+          <div class="streak-copy"><span>ТЕКУЩАЯ СЕРИЯ</span><strong><b id="streak-count">4</b> дня подряд</strong><small>Так держать! Ещё один день — и новый личный рекорд.</small></div>
+          <div class="streak-days" id="streak-days"></div>
+        </div>
+
+        <div class="section-heading"><div><span class="eyebrow">ТВОЙ РИТМ</span><h2>Всё под контролем</h2></div><button class="outline-button" id="today-button">Сегодня <span>→</span></button></div>
+        <div class="stat-grid">
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Занятий в этом месяце</span><span class="stat-symbol orange">◷</span></div><strong id="month-sessions">12</strong><span class="stat-note positive">↑ <b id="month-change">20%</b> к прошлому месяцу</span></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Время за неделю</span><span class="stat-symbol green">◒</span></div><strong><span id="week-minutes">145</span> <em>мин</em></strong><span class="stat-note">Цель: 180 минут</span><div class="progress-bar"><span id="week-progress"></span></div></article>
+          <article class="stat-card quote-card"><div class="quote-mark">“</div><p id="quote">Сначала медленно. Скорость придёт сама.</p><span>— совет преподавателя</span></article>
+        </div>
+
+        <div class="workspace-grid">
+          <section class="calendar-card panel">
+            <div class="calendar-header"><button class="round-button" id="prev-month" aria-label="Предыдущий месяц">‹</button><div><h3 id="calendar-month">Сентябрь 2026</h3><span id="calendar-caption">Нажми на день, чтобы открыть запись</span></div><button class="round-button" id="next-month" aria-label="Следующий месяц">›</button></div>
+            <div class="calendar-weekdays"><span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span></div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+            <div class="calendar-legend"><span><i class="legend-dot completed"></i> Есть запись</span><span><i class="legend-dot today"></i> Сегодня</span><span><i class="legend-dot selected"></i> Выбранный день</span></div>
+          </section>
+
+          <section class="entry-card panel" id="entry-panel">
+            <div class="entry-head"><div><span class="eyebrow">ДНЕВНИК</span><h3 id="entry-date">Сегодня, 4 сентября</h3></div><span class="entry-status" id="entry-status">НОВАЯ ЗАПИСЬ</span></div>
+            <form id="entry-form">
+              <label class="field-label" for="assignment">Домашнее задание <span>Можно писать в свободной форме</span></label>
+              <textarea id="assignment" rows="4" placeholder="Например: гамма Ля минор, 3 подхода по 5 минут..."></textarea>
+              <div class="field-row"><label class="field-label" for="minutes">Время занятия <span>минут</span></label><div class="minutes-input"><input id="minutes" type="number" min="0" max="600" step="5" placeholder="0" /><span>мин</span></div></div>
+              <div class="progress-head"><label class="field-label" for="progress">Мой прогресс</label><output id="progress-output">60%</output></div>
+              <input id="progress" class="range" type="range" min="0" max="100" step="5" value="60" />
+              <div class="range-labels"><span>Начал</span><span>Почти готово</span><span>Сделано</span></div>
+              <label class="check-row"><input type="checkbox" id="completed" /><span class="checkmark">✓</span><span>Отметить как выполненное</span></label>
+              <div class="form-actions"><button type="button" class="delete-button" id="delete-entry">Удалить</button><button class="primary-button" type="submit">Сохранить запись <span>↗</span></button></div>
+            </form>
+          </section>
+        </div>
+
+        <section class="recent-section"><div class="section-heading compact"><div><span class="eyebrow">ПОСЛЕДНИЕ ЗАПИСИ</span><h2>Твои занятия</h2></div><button class="text-button" id="show-all">Показать все <span>→</span></button></div><div class="recent-list" id="recent-list"></div><div class="backup-tools"><span>Данные хранятся на этом устройстве</span><div><button class="backup-button" id="export-data">↓ Скачать копию</button><button class="backup-button" id="import-data">↑ Восстановить</button><input type="file" id="import-file" accept="application/json" hidden /></div></div></section>
+      </section>
+
+      <section class="view hidden" id="stats-view"><div class="empty-view"><div class="empty-icon">◒</div><span class="eyebrow">ПРОГРЕСС</span><h2>Ритм складывается из дней</h2><p>Заполняй дневник после занятий — здесь появится подробная статистика по времени, сериям и выполненным заданиям.</p><button class="primary-button" data-go-journal>Добавить запись <span>↗</span></button></div></section>
+      <section class="view hidden" id="library-view"><div class="empty-view"><div class="empty-icon">♫</div><span class="eyebrow">МАТЕРИАЛЫ</span><h2>Твоя библиотека скоро здесь</h2><p>Преподаватель сможет добавлять упражнения, видео и полезные заметки для занятий.</p><button class="outline-button" data-go-journal>Вернуться в дневник <span>→</span></button></div></section>
+      <section class="view hidden" id="profile-view">
+        <div class="profile-layout">
+          <div class="section-heading profile-heading"><div><span class="eyebrow">ЛИЧНЫЙ КАБИНЕТ</span><h2>Твои данные</h2><p>Имя и дата старта сохраняются только на этом устройстве.</p></div></div>
+          <section class="profile-card panel">
+            <div class="profile-card-head"><div class="profile-avatar" id="profile-avatar">МК</div><div><h3>Профиль ученика</h3><span>Настрой календарь под свой путь</span></div></div>
+            <form id="profile-form">
+              <label class="field-label" for="profile-name">Твоё имя <span>Будет в приветствии</span></label>
+              <input class="profile-input" id="profile-name" type="text" maxlength="40" placeholder="Например, Максим" required />
+              <label class="field-label profile-date-label" for="profile-start-date">Дата начала занятий <span>С неё начинается календарь</span></label>
+              <input class="profile-input" id="profile-start-date" type="date" required />
+              <p class="profile-hint">Дни до выбранной даты будут отмечены в календаре как недоступные для записей.</p>
+              <div class="form-actions"><button type="button" class="outline-button" data-go-journal>← В дневник</button><button class="primary-button" type="submit">Сохранить профиль <span>↗</span></button></div>
+            </form>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>

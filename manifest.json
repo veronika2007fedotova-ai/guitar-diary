@@ -1,0 +1,13 @@
+{
+  "name": "Гитара с Прокопием — дневник занятий",
+  "short_name": "Гитара с Прокопием",
+  "description": "Офлайн-дневник занятий на гитаре",
+  "lang": "ru",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0c0d10",
+  "theme_color": "#0c0d10",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
