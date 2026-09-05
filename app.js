@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'rifflog-entries-v1';
 const PROFILE_KEY = 'rifflog-profile-v1';
 const INSIGHTS_KEY = 'rifflog-insights-v1';
+const FAVORITES_KEY = 'rifflog-favorites-v1';
 const TERMS_KEY = 'rifflog-terms-v1';
 const TEST_STATS_KEY = 'rifflog-word-test-stats-v1';
 const SONGS_KEY = 'rifflog-songs-v1';
@@ -32,6 +33,8 @@ let profile = loadProfile();
 applyTelegramProfile();
 let dailyInsights = loadInsights();
 let entries = loadEntries();
+let favorites = loadFavorites();
+if(favorites.length) saveFavorites();
 let terms = loadTerms();
 if(terms.length) saveTerms();
 let songs = loadSongs();
@@ -73,6 +76,17 @@ function loadInsights(){
   return {};
 }
 function saveInsights(){ localStorage.setItem(INSIGHTS_KEY, JSON.stringify(dailyInsights)); }
+function normalizeFavorite(favorite, fallbackProfileId=profile.id){
+  if(!favorite || typeof favorite!=='object') return null;
+  const title=String(favorite.title||'').trim(), content=String(favorite.content||favorite.text||'').trim();
+  if(!title || !content) return null;
+  return {id:favorite.id||createLocalId('favorite'),profileId:favorite.profileId||fallbackProfileId,title,content,createdAt:favorite.createdAt||new Date().toISOString(),updatedAt:favorite.updatedAt||new Date().toISOString()};
+}
+function loadFavorites(){
+  try { const stored=JSON.parse(localStorage.getItem(FAVORITES_KEY)); if(Array.isArray(stored)) return stored.map(favorite=>normalizeFavorite(favorite)).filter(Boolean); } catch(e) {}
+  return [];
+}
+function saveFavorites(){ localStorage.setItem(FAVORITES_KEY,JSON.stringify(favorites)); }
 function normalizeDailyStats(value){
   const dailyStats={}; if(!value||typeof value!=='object'||Array.isArray(value)) return dailyStats;
   Object.entries(value).forEach(([date,day])=>{
@@ -254,14 +268,14 @@ function renderForm(){
   const previewDate=el('mobile-entry-preview-date'), previewText=el('mobile-entry-preview-text');
   if(previewDate) previewDate.textContent=key===todayKey ? `Сегодня, ${formatDate(selectedDate)}` : `${WEEKDAYS[selectedDate.getDay()]}, ${formatDate(selectedDate)}`;
   if(previewText){ previewText.textContent=entry.assignment||'Нажми, чтобы добавить задание'; previewText.classList.toggle('empty',!entry.assignment); }
-  el('assignment').value=entry.assignment||''; el('minutes').value=entry.minutes||''; el('progress').value=entry.progress ?? 60; el('progress-output').value=`${entry.progress ?? 60}%`; el('progress-output').textContent=`${entry.progress ?? 60}%`; el('completed').checked=!!entry.completed;
-  el('entry-status').textContent=entry.assignment ? 'ЗАПИСЬ СОХРАНЕНА' : 'НОВАЯ ЗАПИСЬ'; el('entry-status').classList.toggle('saved',!!entry.assignment); updateRange();
+  el('training').value=entry.training||''; el('assignment').value=entry.assignment||''; el('minutes').value=entry.minutes||''; el('progress').value=entry.progress ?? 60; el('progress-output').value=`${entry.progress ?? 60}%`; el('progress-output').textContent=`${entry.progress ?? 60}%`; el('completed').checked=!!entry.completed;
+  const hasEntry=!!(entry.training||entry.assignment||entry.minutes); el('entry-status').textContent=hasEntry ? 'ЗАПИСЬ СОХРАНЕНА' : 'НОВАЯ ЗАПИСЬ'; el('entry-status').classList.toggle('saved',hasEntry); updateRange();
 }
 function updateRange(){ const val=el('progress').value; el('progress-output').textContent=`${val}%`; el('progress-output').value=`${val}%`; el('progress').style.background=`linear-gradient(90deg,var(--orange) 0%,var(--orange) ${val}%,#363941 ${val}%,#363941 100%)`; }
 function renderRecent(){
   const list=el('recent-list'); list.innerHTML=''; const items=Object.keys(entries).filter(key=>key>=profile.startDate).sort((a,b)=>b.localeCompare(a)).slice(0,6);
   if(!items.length){ list.innerHTML='<div class="recent-item"><h4>Пока нет записей — добавь первое занятие в календаре.</h4></div>'; return; }
-  items.forEach(key=>{ const e=entries[key], item=document.createElement('article'); item.className='recent-item'; item.dataset.date=key; item.innerHTML=`<div class="recent-item-top"><span class="recent-item-date">${formatDate(parseKey(key),true)}</span><span class="recent-check">${e.completed?'✓':''}</span></div><h4>${escapeHtml(e.assignment||'Без описания')}</h4><div class="recent-item-bottom"><span>Время: ${e.minutes||0} мин</span><span>Результат: ${e.progress||0}%</span></div><div class="recent-progress"><span style="width:${e.progress||0}%"></span></div><div class="recent-actions"><button class="recent-edit" type="button">Редактировать</button><button class="recent-delete" type="button">Удалить</button></div>`; item.addEventListener('click',()=>selectDate(parseKey(key))); item.querySelector('.recent-edit').addEventListener('click',event=>{ event.stopPropagation(); selectDate(parseKey(key)); el('entry-panel').scrollIntoView({behavior:'smooth',block:'start'}); }); item.querySelector('.recent-delete').addEventListener('click',event=>{ event.stopPropagation(); removeEntry(key); }); list.appendChild(item); });
+  items.forEach(key=>{ const e=entries[key], summary=[e.training,e.assignment].filter(Boolean).join(' · ')||'Без описания', item=document.createElement('article'); item.className='recent-item'; item.dataset.date=key; item.innerHTML=`<div class="recent-item-top"><span class="recent-item-date">${formatDate(parseKey(key),true)}</span><span class="recent-check">${e.completed?'✓':''}</span></div><h4>${escapeHtml(summary)}</h4><div class="recent-item-bottom"><span>Время: ${e.minutes||0} мин</span><span>Результат: ${e.progress||0}%</span></div><div class="recent-progress"><span style="width:${e.progress||0}%"></span></div><div class="recent-actions"><button class="recent-edit" type="button">Редактировать</button><button class="recent-delete" type="button">Удалить</button></div>`; item.addEventListener('click',()=>selectDate(parseKey(key))); item.querySelector('.recent-edit').addEventListener('click',event=>{ event.stopPropagation(); selectDate(parseKey(key)); el('entry-panel').scrollIntoView({behavior:'smooth',block:'start'}); }); item.querySelector('.recent-delete').addEventListener('click',event=>{ event.stopPropagation(); removeEntry(key); }); list.appendChild(item); });
 }
 function removeEntry(key){
   if(!entries[key]) return;
@@ -316,7 +330,22 @@ function renderInsight(){
   if(edit) edit.innerHTML=text?'Редактировать <span>✎</span>':'Добавить инсайт <span>＋</span>';
   if(remove) remove.hidden=!text;
 }
+function getCurrentFavorites(){ return favorites.filter(favorite=>favorite.profileId===profile.id); }
+function renderFavoriteList(){
+  const list=el('favorites-list'); if(!list) return; list.innerHTML='';
+  const currentFavorites=getCurrentFavorites().sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  if(!currentFavorites.length){ list.innerHTML='<div class="favorite-empty"><strong>Избранное пока пусто.</strong><span>Сохрани первую важную информацию, чтобы быстро находить её на занятиях.</span></div>'; return; }
+  currentFavorites.forEach(favorite=>{
+    const item=document.createElement('article'); item.className='favorite-item';
+    item.innerHTML=`<button class="favorite-open" type="button" aria-label="Открыть тему «${escapeHtml(favorite.title)}»"><span class="favorite-open-icon">☆</span><span class="favorite-open-copy"><strong>${escapeHtml(favorite.title)}</strong><small>Нажми, чтобы открыть информацию</small></span><span class="favorite-open-arrow">→</span></button><div class="favorite-item-actions"><button class="favorite-edit" type="button">Редактировать</button><button class="favorite-delete" type="button">Удалить</button></div>`;
+    item.querySelector('.favorite-open').addEventListener('click',()=>openFavoriteDetail(favorite.id));
+    item.querySelector('.favorite-edit').addEventListener('click',()=>editFavorite(favorite.id));
+    item.querySelector('.favorite-delete').addEventListener('click',()=>removeFavorite(favorite.id));
+    list.appendChild(item);
+  });
+}
 function renderMaterials(){
+  renderFavoriteList();
   const list=el('insight-list'); if(!list) return; list.innerHTML='';
   const keys=Object.keys(dailyInsights).filter(key=>/^\d{4}-\d{2}-\d{2}$/.test(key) && dailyInsights[key]).sort((a,b)=>b.localeCompare(a));
   if(!keys.length){ list.innerHTML='<div class="insight-empty">Пока нет инсайтов. Добавь первую мысль для себя.</div>'; return; }
@@ -328,14 +357,33 @@ function renderMaterials(){
     list.appendChild(item);
   });
 }
+let editingFavoriteId=null;
+let openedFavoriteId=null;
+function openFavoriteModal(favoriteId=null){
+  const modal=el('favorite-modal'); if(!modal) return;
+  const favorite=favorites.find(item=>item.id===favoriteId&&item.profileId===profile.id); editingFavoriteId=favorite?favorite.id:null;
+  el('favorite-modal-title').textContent=favorite?'Редактировать информацию':'Новая информация'; el('favorite-title').value=favorite?favorite.title:''; el('favorite-text').value=favorite?favorite.content:''; modal.classList.remove('hidden'); window.setTimeout(()=>el('favorite-title')?.focus(),0);
+}
+function closeFavoriteModal(){ const modal=el('favorite-modal'); if(modal) modal.classList.add('hidden'); editingFavoriteId=null; }
+function openFavoriteDetail(favoriteId){
+  const favorite=favorites.find(item=>item.id===favoriteId&&item.profileId===profile.id), modal=el('favorite-detail-modal'); if(!favorite||!modal) return;
+  openedFavoriteId=favorite.id; el('favorite-detail-title').textContent=favorite.title; const updated=new Date(favorite.updatedAt), date=el('favorite-detail-date'); date.textContent=Number.isNaN(updated.getTime())?'':`Обновлено ${formatDate(updated,true)}`; el('favorite-detail-content').textContent=favorite.content; modal.classList.remove('hidden');
+}
+function closeFavoriteDetail(){ const modal=el('favorite-detail-modal'); if(modal) modal.classList.add('hidden'); openedFavoriteId=null; }
+function editFavorite(favoriteId){ closeFavoriteDetail(); openFavoriteModal(favoriteId); }
+function removeFavorite(favoriteId){
+  const favorite=favorites.find(item=>item.id===favoriteId&&item.profileId===profile.id); if(!favorite) return;
+  if(!window.confirm(`Удалить тему «${favorite.title}»?`)) return;
+  favorites=favorites.filter(item=>item.id!==favoriteId); saveFavorites(); if(openedFavoriteId===favoriteId) closeFavoriteDetail(); renderMaterials(); showToast('Избранное удалено');
+}
 let editingInsightKey=null;
 function openInsightModal(dateKey=todayKey){
   const modal=el('insight-modal'); if(!modal) return;
-  const defaultKey=dateKey>=profile.startDate ? dateKey : (todayKey>=profile.startDate ? todayKey : profile.startDate);
-  editingInsightKey=dailyInsights[dateKey] ? dateKey : null;
+  const requestedKey=/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey))?String(dateKey):todayKey;
+  editingInsightKey=dailyInsights[requestedKey] ? requestedKey : null;
   el('insight-modal-title').textContent=editingInsightKey?'Редактировать инсайт':'Новый инсайт';
-  el('insight-date').min=profile.startDate; el('insight-date').value=defaultKey;
-  el('insight-text').value=dailyInsights[dateKey]||'';
+  el('insight-date').removeAttribute('min'); el('insight-date').value=requestedKey;
+  el('insight-text').value=dailyInsights[requestedKey]||'';
   modal.classList.remove('hidden');
   window.setTimeout(()=>el('insight-text')?.focus(),0);
 }
@@ -544,7 +592,7 @@ function renderProgress(){
   renderWeeklyGoal();
 }
 
-el('entry-form').addEventListener('submit',e=>{ e.preventDefault(); const key=toKey(selectedDate); if(key<profile.startDate){ showToast('Выбери день начиная с даты старта'); return; } const assignment=el('assignment').value.trim(); if(!assignment && !el('minutes').value){ showToast('Добавь задание или время занятия'); return; } entries[key]={assignment,minutes:Number(el('minutes').value)||0,progress:Number(el('progress').value)||0,completed:el('completed').checked}; saveEntries(); renderCalendar(); renderForm(); renderRecent(); calcStats(); closeMobileEntry(); showToast('Запись сохранена'); });
+el('entry-form').addEventListener('submit',e=>{ e.preventDefault(); const key=toKey(selectedDate); if(key<profile.startDate){ showToast('Выбери день начиная с даты старта'); return; } const training=el('training').value.trim(), assignment=el('assignment').value.trim(); if(!training && !assignment && !el('minutes').value){ showToast('Добавь тренировку, задание или время занятия'); return; } entries[key]={training,assignment,minutes:Number(el('minutes').value)||0,progress:Number(el('progress').value)||0,completed:el('completed').checked}; saveEntries(); renderCalendar(); renderForm(); renderRecent(); calcStats(); closeMobileEntry(); showToast('Запись сохранена'); });
 el('delete-entry').addEventListener('click',()=>{ const key=toKey(selectedDate); if(!entries[key]){ showToast('В этот день ещё нет записи'); return; } removeEntry(key); });
 el('progress').addEventListener('input',updateRange);
 el('weekly-goal-edit').addEventListener('click',openWeeklyGoalModal);
@@ -612,21 +660,38 @@ el('mobile-drawer-scrim').addEventListener('click',closeMobileDrawer);
 el('mobile-entry-open').addEventListener('click',openMobileEntry);
 el('mobile-entry-close').addEventListener('click',closeMobileEntry);
 el('mobile-entry-backdrop').addEventListener('click',closeMobileEntry);
-document.addEventListener('keydown',event=>{ if(event.key==='Escape'){ closeMobileDrawer(); closeMobileEntry(); closeWeeklyGoalModal(); } });
+document.addEventListener('keydown',event=>{ if(event.key==='Escape'){ closeMobileDrawer(); closeMobileEntry(); closeWeeklyGoalModal(); closeInsightModal(); closeFavoriteModal(); closeFavoriteDetail(); } });
 el('insight-edit').addEventListener('click',()=>openInsightModal(todayKey));
 el('insight-delete').addEventListener('click',()=>removeInsight(todayKey));
-el('new-insight').addEventListener('click',()=>{ const selectedKey=toKey(selectedDate); openInsightModal(selectedKey>=profile.startDate?selectedKey:todayKey); });
+el('new-insight').addEventListener('click',()=>openInsightModal(toKey(selectedDate)));
 el('insight-modal-close').addEventListener('click',closeInsightModal);
 el('insight-cancel').addEventListener('click',closeInsightModal);
 el('insight-modal').addEventListener('click',event=>{ if(event.target.id==='insight-modal') closeInsightModal(); });
 el('insight-form').addEventListener('submit',event=>{
   event.preventDefault();
   const key=el('insight-date').value, text=el('insight-text').value.trim();
-  if(!key || key<profile.startDate){ showToast('Выбери день начиная с даты старта'); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(key)){ showToast('Выбери дату инсайта'); return; }
   if(!text){ showToast('Поле инсайта обязательно'); el('insight-text').focus(); return; }
   if(editingInsightKey && editingInsightKey!==key) delete dailyInsights[editingInsightKey];
   dailyInsights[key]=text; saveInsights(); closeInsightModal(); renderInsight(); renderMaterials(); showToast('Инсайт сохранён');
 });
+el('new-favorite').addEventListener('click',()=>openFavoriteModal());
+el('favorite-modal-close').addEventListener('click',closeFavoriteModal);
+el('favorite-cancel').addEventListener('click',closeFavoriteModal);
+el('favorite-modal').addEventListener('click',event=>{ if(event.target.id==='favorite-modal') closeFavoriteModal(); });
+el('favorite-form').addEventListener('submit',event=>{
+  event.preventDefault();
+  const title=el('favorite-title').value.trim(), content=el('favorite-text').value.trim();
+  if(!title||!content){ showToast('Заполни название и информацию'); return; }
+  const timestamp=new Date().toISOString();
+  if(editingFavoriteId){ const favorite=favorites.find(item=>item.id===editingFavoriteId&&item.profileId===profile.id); if(favorite){ favorite.title=title; favorite.content=content; favorite.updatedAt=timestamp; showToast('Избранное обновлено'); } }
+  else { favorites.push({id:createLocalId('favorite'),profileId:profile.id,title,content,createdAt:timestamp,updatedAt:timestamp}); showToast('Информация добавлена в избранное'); }
+  saveFavorites(); closeFavoriteModal(); renderMaterials();
+});
+el('favorite-detail-close').addEventListener('click',closeFavoriteDetail);
+el('favorite-detail-modal').addEventListener('click',event=>{ if(event.target.id==='favorite-detail-modal') closeFavoriteDetail(); });
+el('favorite-detail-edit').addEventListener('click',()=>{ if(openedFavoriteId) editFavorite(openedFavoriteId); });
+el('favorite-detail-delete').addEventListener('click',()=>{ if(openedFavoriteId) removeFavorite(openedFavoriteId); });
 updateTodayUi();
 el('greeting-name').textContent=profile.name;
 el('user-avatar').textContent=getInitials(profile.name);
@@ -642,7 +707,7 @@ el('profile-form').addEventListener('submit',event=>{
 });
 el('new-profile').addEventListener('click',()=>{
   if(!window.confirm('Начать новый профиль? Все записи занятий на этом устройстве будут удалены.')) return;
-  const freshName=telegramUser?[telegramUser.first_name,telegramUser.last_name].filter(Boolean).join(' ').trim()||'Новый ученик':'Новый ученик'; profile={id:createLocalId('profile'),name:freshName,startDate:todayKey,weeklyGoal:DEFAULT_WEEKLY_GOAL}; if(telegramUser?.username) profile.telegramUsername=telegramUser.username; entries={}; dailyInsights={}; terms=[]; songs=[]; testStats={}; saveProfile(); saveEntries(); saveInsights(); saveTerms(); saveSongs(); saveTestStats();
+  const freshName=telegramUser?[telegramUser.first_name,telegramUser.last_name].filter(Boolean).join(' ').trim()||'Новый ученик':'Новый ученик'; profile={id:createLocalId('profile'),name:freshName,startDate:todayKey,weeklyGoal:DEFAULT_WEEKLY_GOAL}; if(telegramUser?.username) profile.telegramUsername=telegramUser.username; entries={}; dailyInsights={}; favorites=[]; terms=[]; songs=[]; testStats={}; saveProfile(); saveEntries(); saveInsights(); saveFavorites(); saveTerms(); saveSongs(); saveTestStats();
   selectedDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()); calendarDate=new Date(now.getFullYear(),now.getMonth(),1);
   el('greeting-name').textContent=profile.name; el('user-avatar').textContent=getInitials(profile.name); renderProfile(); renderInsight(); renderMaterials(); renderSongs(); renderTerms(); renderQuizStart(); renderWordStats(); renderCalendar(); renderForm(); renderRecent(); calcStats(); showToast('Новый профиль создан');
 });
@@ -657,13 +722,13 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshT
 
 // Перенос дневника между телефоном и компьютером без сервера.
 el('export-data').addEventListener('click',()=>{
-  const payload={app:'RiffLog',version:7,exportedAt:new Date().toISOString(),profile,entries,insights:dailyInsights,terms:terms.filter(term=>term.profileId===profile.id),songs:songs.filter(song=>song.profileId===profile.id),testStats:testStats[profile.id]||null};
+  const payload={app:'RiffLog',version:8,exportedAt:new Date().toISOString(),profile,entries,insights:dailyInsights,favorites:favorites.filter(favorite=>favorite.profileId===profile.id),terms:terms.filter(term=>term.profileId===profile.id),songs:songs.filter(song=>song.profileId===profile.id),testStats:testStats[profile.id]||null};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}), url=URL.createObjectURL(blob), a=document.createElement('a');
   a.href=url; a.download=`rifflog-backup-${toKey(new Date())}.json`; a.click(); URL.revokeObjectURL(url); showToast('Копия дневника скачана');
 });
 el('import-data').addEventListener('click',()=>el('import-file').click());
 el('import-file').addEventListener('change',event=>{
   const file=event.target.files?.[0]; if(!file) return; const reader=new FileReader();
-  reader.onload=()=>{ try{ const payload=JSON.parse(reader.result); if(!payload.entries || typeof payload.entries!=='object') throw new Error('bad'); entries=payload.entries; dailyInsights=payload.insights&&typeof payload.insights==='object'&&!Array.isArray(payload.insights)?payload.insights:{}; if(payload.profile&&payload.profile.name&&payload.profile.startDate){ profile={...payload.profile,id:payload.profile.id||createLocalId('profile'),weeklyGoal:normalizeWeeklyGoal(payload.profile.weeklyGoal)}; saveProfile(); } if(Array.isArray(payload.terms)){ terms=payload.terms.map(term=>{ const normalized=normalizeTerm(term,profile.id); return normalized?{...normalized,profileId:profile.id}:null; }).filter(Boolean); saveTerms(); } if(Array.isArray(payload.songs)){ songs=payload.songs.map(song=>{ const normalized=normalizeSong(song,profile.id); return normalized?{...normalized,profileId:profile.id}:null; }).filter(Boolean); saveSongs(); } if(payload.testStats&&typeof payload.testStats==='object'&&!Array.isArray(payload.testStats)){ testStats={...testStats,[profile.id]:payload.testStats}; saveTestStats(); } saveEntries(); saveInsights(); if(toKey(selectedDate)<profile.startDate) selectedDate=parseKey(profile.startDate); calendarDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1); el('greeting-name').textContent=profile.name; el('user-avatar').textContent=getInitials(profile.name); renderProfile(); renderInsight(); renderMaterials(); renderSongs(); renderTerms(); renderQuizStart(); renderWordStats(); renderCalendar(); renderForm(); renderRecent(); calcStats(); showToast('Дневник восстановлен'); }catch(e){ showToast('Не удалось прочитать копию'); } event.target.value=''; }; reader.readAsText(file);
+  reader.onload=()=>{ try{ const payload=JSON.parse(reader.result); if(!payload.entries || typeof payload.entries!=='object') throw new Error('bad'); entries=payload.entries; dailyInsights=payload.insights&&typeof payload.insights==='object'&&!Array.isArray(payload.insights)?payload.insights:{}; if(payload.profile&&payload.profile.name&&payload.profile.startDate){ profile={...payload.profile,id:payload.profile.id||createLocalId('profile'),weeklyGoal:normalizeWeeklyGoal(payload.profile.weeklyGoal)}; saveProfile(); } if(Array.isArray(payload.favorites)){ favorites=payload.favorites.map(favorite=>{ const normalized=normalizeFavorite(favorite,profile.id); return normalized?{...normalized,profileId:profile.id}:null; }).filter(Boolean); saveFavorites(); } if(Array.isArray(payload.terms)){ terms=payload.terms.map(term=>{ const normalized=normalizeTerm(term,profile.id); return normalized?{...normalized,profileId:profile.id}:null; }).filter(Boolean); saveTerms(); } if(Array.isArray(payload.songs)){ songs=payload.songs.map(song=>{ const normalized=normalizeSong(song,profile.id); return normalized?{...normalized,profileId:profile.id}:null; }).filter(Boolean); saveSongs(); } if(payload.testStats&&typeof payload.testStats==='object'&&!Array.isArray(payload.testStats)){ testStats={...testStats,[profile.id]:payload.testStats}; saveTestStats(); } saveEntries(); saveInsights(); if(toKey(selectedDate)<profile.startDate) selectedDate=parseKey(profile.startDate); calendarDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1); el('greeting-name').textContent=profile.name; el('user-avatar').textContent=getInitials(profile.name); renderProfile(); renderInsight(); renderMaterials(); renderSongs(); renderTerms(); renderQuizStart(); renderWordStats(); renderCalendar(); renderForm(); renderRecent(); calcStats(); showToast('Дневник восстановлен'); }catch(e){ showToast('Не удалось прочитать копию'); } event.target.value=''; }; reader.readAsText(file);
 });
 if('serviceWorker' in navigator && location.protocol!=='file:'){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
