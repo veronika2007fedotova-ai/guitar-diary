@@ -233,9 +233,9 @@ function updateWeeklyGoal(value){
 }
 function openWeeklyGoalModal(){
   const modal=el('weekly-goal-modal'); if(!modal) return;
-  el('weekly-goal-editor').value=getWeeklyGoal(); modal.classList.remove('hidden'); window.setTimeout(()=>{ const input=el('weekly-goal-editor'); input?.focus(); input?.select(); },0);
+  el('weekly-goal-editor').value=getWeeklyGoal(); modal.classList.remove('hidden'); setModalPageLock(true); window.setTimeout(()=>{ const input=el('weekly-goal-editor'); input?.focus(); input?.select(); },0);
 }
-function closeWeeklyGoalModal(){ const modal=el('weekly-goal-modal'); if(modal) modal.classList.add('hidden'); }
+function closeWeeklyGoalModal(){ const modal=el('weekly-goal-modal'); if(modal) modal.classList.add('hidden'); setModalPageLock(false); }
 function el(id){ return document.getElementById(id); }
 function renderCalendar(){
   el('calendar-month').textContent = `${MONTHS[calendarDate.getMonth()]} ${calendarDate.getFullYear()}`;
@@ -292,10 +292,11 @@ function calcStats(){
   renderProgress();
 }
 function showToast(message){ const toast=el('toast'); toast.textContent=message; toast.classList.add('show'); clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.classList.remove('show'),2200); }
-function switchView(view){ if(view!=='journal') closeMobileEntry(); document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden')); el(`${view}-view`).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view)); if(view==='stats') renderProgress(); if(view==='test'){ renderTerms(); renderWordStats(); } if(view==='chords') renderSongs(); }
+function switchView(view){ if(view!=='journal') closeMobileEntry(); document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden')); el(`${view}-view`).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view)); if(view==='stats') renderProgress(); if(view==='test'){ renderTerms(); renderWordStats(); } if(view==='chords') renderSongs(); window.scrollTo(0,0); }
+function setModalPageLock(locked){ document.documentElement.classList.toggle('modal-locked',locked); document.body.classList.toggle('modal-locked',locked); }
 function setMobileEntry(open){
   const entry=el('entry-panel'), backdrop=el('mobile-entry-backdrop'); if(!entry||!backdrop) return;
-  entry.classList.toggle('mobile-entry-open',open); backdrop.classList.toggle('hidden',!open); backdrop.classList.toggle('open',open); document.body.classList.toggle('mobile-entry-locked',open);
+  entry.classList.toggle('mobile-entry-open',open); backdrop.classList.toggle('hidden',!open); backdrop.classList.toggle('open',open); document.documentElement.classList.toggle('mobile-entry-locked',open); document.body.classList.toggle('mobile-entry-locked',open);
 }
 function openMobileEntry(){ setMobileEntry(true); }
 function closeMobileEntry(){ setMobileEntry(false); }
@@ -362,14 +363,14 @@ let openedFavoriteId=null;
 function openFavoriteModal(favoriteId=null){
   const modal=el('favorite-modal'); if(!modal) return;
   const favorite=favorites.find(item=>item.id===favoriteId&&item.profileId===profile.id); editingFavoriteId=favorite?favorite.id:null;
-  el('favorite-modal-title').textContent=favorite?'Редактировать информацию':'Новая информация'; el('favorite-title').value=favorite?favorite.title:''; el('favorite-text').value=favorite?favorite.content:''; modal.classList.remove('hidden'); window.setTimeout(()=>el('favorite-title')?.focus(),0);
+  el('favorite-modal-title').textContent=favorite?'Редактировать информацию':'Новая информация'; el('favorite-title').value=favorite?favorite.title:''; el('favorite-text').value=favorite?favorite.content:''; modal.classList.remove('hidden'); setModalPageLock(true); window.setTimeout(()=>el('favorite-title')?.focus(),0);
 }
-function closeFavoriteModal(){ const modal=el('favorite-modal'); if(modal) modal.classList.add('hidden'); editingFavoriteId=null; }
+function closeFavoriteModal(){ const modal=el('favorite-modal'); if(modal) modal.classList.add('hidden'); editingFavoriteId=null; setModalPageLock(false); }
 function openFavoriteDetail(favoriteId){
   const favorite=favorites.find(item=>item.id===favoriteId&&item.profileId===profile.id), modal=el('favorite-detail-modal'); if(!favorite||!modal) return;
-  openedFavoriteId=favorite.id; el('favorite-detail-title').textContent=favorite.title; const updated=new Date(favorite.updatedAt), date=el('favorite-detail-date'); date.textContent=Number.isNaN(updated.getTime())?'':`Обновлено ${formatDate(updated,true)}`; el('favorite-detail-content').textContent=favorite.content; modal.classList.remove('hidden');
+  openedFavoriteId=favorite.id; el('favorite-detail-title').textContent=favorite.title; const updated=new Date(favorite.updatedAt), date=el('favorite-detail-date'); date.textContent=Number.isNaN(updated.getTime())?'':`Обновлено ${formatDate(updated,true)}`; el('favorite-detail-content').textContent=favorite.content; modal.classList.remove('hidden'); setModalPageLock(true);
 }
-function closeFavoriteDetail(){ const modal=el('favorite-detail-modal'); if(modal) modal.classList.add('hidden'); openedFavoriteId=null; }
+function closeFavoriteDetail(){ const modal=el('favorite-detail-modal'); if(modal) modal.classList.add('hidden'); openedFavoriteId=null; setModalPageLock(false); }
 function editFavorite(favoriteId){ closeFavoriteDetail(); openFavoriteModal(favoriteId); }
 function removeFavorite(favoriteId){
   const favorite=favorites.find(item=>item.id===favoriteId&&item.profileId===profile.id); if(!favorite) return;
@@ -384,10 +385,10 @@ function openInsightModal(dateKey=todayKey){
   el('insight-modal-title').textContent=editingInsightKey?'Редактировать инсайт':'Новый инсайт';
   el('insight-date').removeAttribute('min'); el('insight-date').value=requestedKey;
   el('insight-text').value=dailyInsights[requestedKey]||'';
-  modal.classList.remove('hidden');
+  modal.classList.remove('hidden'); setModalPageLock(true);
   window.setTimeout(()=>el('insight-text')?.focus(),0);
 }
-function closeInsightModal(){ const modal=el('insight-modal'); if(modal) modal.classList.add('hidden'); editingInsightKey=null; }
+function closeInsightModal(){ const modal=el('insight-modal'); if(modal) modal.classList.add('hidden'); editingInsightKey=null; setModalPageLock(false); }
 function removeInsight(key){
   if(!dailyInsights[key]) return;
   if(!window.confirm(`Удалить инсайт за ${formatDate(parseKey(key),true)}?`)) return;
