@@ -334,7 +334,9 @@ function renderInsight(){
 function getCurrentFavorites(){ return favorites.filter(favorite=>favorite.profileId===profile.id); }
 function renderFavoriteList(){
   const list=el('favorites-list'); if(!list) return; list.innerHTML='';
-  const currentFavorites=getCurrentFavorites().sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  const query=(el('favorite-search')?.value||'').trim().toLocaleLowerCase();
+  const currentFavorites=getCurrentFavorites().filter(favorite=>!query||`${favorite.title} ${favorite.content}`.toLocaleLowerCase().includes(query)).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  if(query&&!currentFavorites.length){ list.innerHTML='<div class="favorite-empty"><strong>Ничего не найдено.</strong><span>Попробуй изменить запрос или очистить поиск.</span></div>'; return; }
   if(!currentFavorites.length){ list.innerHTML='<div class="favorite-empty"><strong>Избранное пока пусто.</strong><span>Сохрани первую важную информацию, чтобы быстро находить её на занятиях.</span></div>'; return; }
   currentFavorites.forEach(favorite=>{
     const item=document.createElement('article'); item.className='favorite-item';
@@ -693,6 +695,7 @@ el('favorite-detail-close').addEventListener('click',closeFavoriteDetail);
 el('favorite-detail-modal').addEventListener('click',event=>{ if(event.target.id==='favorite-detail-modal') closeFavoriteDetail(); });
 el('favorite-detail-edit').addEventListener('click',()=>{ if(openedFavoriteId) editFavorite(openedFavoriteId); });
 el('favorite-detail-delete').addEventListener('click',()=>{ if(openedFavoriteId) removeFavorite(openedFavoriteId); });
+el('favorite-search').addEventListener('input',renderFavoriteList);
 updateTodayUi();
 el('greeting-name').textContent=profile.name;
 el('user-avatar').textContent=getInitials(profile.name);
@@ -732,4 +735,8 @@ el('import-file').addEventListener('change',event=>{
   const file=event.target.files?.[0]; if(!file) return; const reader=new FileReader();
   reader.onload=()=>{ try{ const payload=JSON.parse(reader.result); if(!payload.entries || typeof payload.entries!=='object') throw new Error('bad'); entries=payload.entries; dailyInsights=payload.insights&&typeof payload.insights==='object'&&!Array.isArray(payload.insights)?payload.insights:{}; if(payload.profile&&payload.profile.name&&payload.profile.startDate){ profile={...payload.profile,id:payload.profile.id||createLocalId('profile'),weeklyGoal:normalizeWeeklyGoal(payload.profile.weeklyGoal)}; saveProfile(); } if(Array.isArray(payload.favorites)){ favorites=payload.favorites.map(favorite=>{ const normalized=normalizeFavorite(favorite,profile.id); return normalized?{...normalized,profileId:profile.id}:null; }).filter(Boolean); saveFavorites(); } if(Array.isArray(payload.terms)){ terms=payload.terms.map(term=>{ const normalized=normalizeTerm(term,profile.id); return normalized?{...normalized,profileId:profile.id}:null; }).filter(Boolean); saveTerms(); } if(Array.isArray(payload.songs)){ songs=payload.songs.map(song=>{ const normalized=normalizeSong(song,profile.id); return normalized?{...normalized,profileId:profile.id}:null; }).filter(Boolean); saveSongs(); } if(payload.testStats&&typeof payload.testStats==='object'&&!Array.isArray(payload.testStats)){ testStats={...testStats,[profile.id]:payload.testStats}; saveTestStats(); } saveEntries(); saveInsights(); if(toKey(selectedDate)<profile.startDate) selectedDate=parseKey(profile.startDate); calendarDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1); el('greeting-name').textContent=profile.name; el('user-avatar').textContent=getInitials(profile.name); renderProfile(); renderInsight(); renderMaterials(); renderSongs(); renderTerms(); renderQuizStart(); renderWordStats(); renderCalendar(); renderForm(); renderRecent(); calcStats(); showToast('Дневник восстановлен'); }catch(e){ showToast('Не удалось прочитать копию'); } event.target.value=''; }; reader.readAsText(file);
 });
-if('serviceWorker' in navigator && location.protocol!=='file:'){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  const hadController=Boolean(navigator.serviceWorker.controller); let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(!hadController||refreshing) return; refreshing=true; window.location.reload(); });
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}); });
+}
