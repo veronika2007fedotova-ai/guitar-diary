@@ -3,7 +3,7 @@
   if(root) root.GuitarDiaryI18n=api;
   if(typeof module==='object'&&module.exports) module.exports=api;
 })(typeof window!=='undefined'?window:typeof globalThis!=='undefined'?globalThis:null,function(){
-  const LANGUAGE_KEY='rifflog-language-v1';
+  const LANGUAGE_KEY='rifflog-language-v1', BROWSER_SCOPE_KEY='rifflog-browser-scope-v1';
   const translations={
     ru:{
       appTitle:'Гитара с Прокопием — дневник занятий',brandMain:'Гитара',brandWith:'с Прокопием',brandSubtitle:'дневник занятий',navJournal:'Мой дневник',navStats:'Прогресс',navMaterials:'Материалы',navWords:'Слова',navChords:'Аккорды',tipTitle:'Маленький шаг каждый день',tipText:'10 минут сегодня лучше, чем час когда-нибудь.',profileCabinet:'Личный кабинет',languageLabel:'🌐 Язык интерфейса',languageRussian:'Русский',languageEnglish:'English',
@@ -49,15 +49,46 @@
   Object.assign(translations.ru,{teacherSession:'Занятие с педагогом'});
   Object.assign(translations.en,{teacherSession:'Lesson with teacher'});
   const dateLabels={ru:{months:['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],monthsGen:['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'],weekdaysLong:['ВОСКРЕСЕНЬЕ','ПОНЕДЕЛЬНИК','ВТОРНИК','СРЕДА','ЧЕТВЕРГ','ПЯТНИЦА','СУББОТА'],weekdays:['вс','пн','вт','ср','чт','пт','сб']},en:{months:['January','February','March','April','May','June','July','August','September','October','November','December'],monthsGen:['January','February','March','April','May','June','July','August','September','October','November','December'],weekdaysLong:['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'],weekdays:['Su','Mo','Tu','We','Th','Fr','Sa']}};
+  let cachedStorageScope=null;
+  function runtimeRoot(){ return typeof window!=='undefined'?window:typeof globalThis!=='undefined'?globalThis:null; }
+  function getTelegramUserId(){
+    try {
+      const value=runtimeRoot()?.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+      return /^\d+$/.test(String(value||''))?String(value):null;
+    } catch(error) { return null; }
+  }
+  function getBrowserStorage(){
+    try { return typeof localStorage!=='undefined'?localStorage:null; } catch(error) { return null; }
+  }
+  function createBrowserScope(){
+    const storage=getBrowserStorage();
+    try {
+      const stored=storage?.getItem(BROWSER_SCOPE_KEY);
+      if(/^browser-[a-z0-9_-]+$/i.test(String(stored||''))) return stored;
+      const random=runtimeRoot()?.crypto?.randomUUID?.()||`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`;
+      const scope=`browser-${String(random).replace(/[^a-z0-9_-]/gi,'').slice(0,48)}`;
+      storage?.setItem(BROWSER_SCOPE_KEY,scope);
+      return scope;
+    } catch(error) {
+      return `browser-session-${Date.now().toString(36)}`;
+    }
+  }
+  function getStorageScope(){
+    if(cachedStorageScope) return cachedStorageScope;
+    const telegramId=getTelegramUserId();
+    cachedStorageScope=telegramId?`telegram-${telegramId}`:createBrowserScope();
+    return cachedStorageScope;
+  }
+  function getStorageKey(key){ return `guitarDiary:${getStorageScope()}:${String(key)}`; }
   function normalizeLanguage(value){ return value==='ru'||value==='en'?value:null; }
   function detectLanguage(systemLanguage){ const value=String(systemLanguage===undefined?(typeof navigator!=='undefined'?navigator.language:''):systemLanguage).toLowerCase(); return value.startsWith('ru')?'ru':'en'; }
-  function loadLanguage(storage,systemLanguage){ let stored=null; try{ stored=storage?.getItem?.(LANGUAGE_KEY); }catch(error){} return normalizeLanguage(stored)||detectLanguage(systemLanguage); }
-  let currentLanguage=loadLanguage(typeof localStorage!=='undefined'?localStorage:null);
+  function loadLanguage(storage,systemLanguage,key=LANGUAGE_KEY){ let stored=null; try{ stored=storage?.getItem?.(key); }catch(error){} return normalizeLanguage(stored)||detectLanguage(systemLanguage); }
+  let currentLanguage=loadLanguage(getBrowserStorage(),undefined,getStorageKey(LANGUAGE_KEY));
   function t(key,values={}){ const template=translations[currentLanguage]?.[key]??translations.en[key]??key; return template.replace(/\{(\w+)\}/g,(_,name)=>values[name]===undefined?'':String(values[name])); }
   function formatDate(date,includeYear=false){ return new Intl.DateTimeFormat(currentLanguage==='ru'?'ru-RU':'en-US',{day:'numeric',month:'long',...(includeYear?{year:'numeric'}:{})}).format(date); }
   function getDateLabels(){ return dateLabels[currentLanguage]; }
   function getLanguage(){ return currentLanguage; }
-  function setLanguage(value,persist=true){ const next=normalizeLanguage(value); if(!next) return currentLanguage; const changed=currentLanguage!==next; currentLanguage=next; if(persist&&typeof localStorage!=='undefined'){ try{ localStorage.setItem(LANGUAGE_KEY,currentLanguage); }catch(error){} } if(changed&&typeof window!=='undefined'){ const event=typeof CustomEvent==='function'?new CustomEvent('guitar-diary-language-change',{detail:{language:currentLanguage}}):new Event('guitar-diary-language-change'); window.dispatchEvent(event); } return currentLanguage; }
+  function setLanguage(value,persist=true){ const next=normalizeLanguage(value); if(!next) return currentLanguage; const changed=currentLanguage!==next; currentLanguage=next; if(persist){ try{ getBrowserStorage()?.setItem(getStorageKey(LANGUAGE_KEY),currentLanguage); }catch(error){} } if(changed&&typeof window!=='undefined'){ const event=typeof CustomEvent==='function'?new CustomEvent('guitar-diary-language-change',{detail:{language:currentLanguage}}):new Event('guitar-diary-language-change'); window.dispatchEvent(event); } return currentLanguage; }
   const skipSelector='#greeting-name,#top-telegram-link,#profile-telegram-link,#insight-day,#mobile-entry-preview-text,#recent-list,#favorites-list,#insight-list,#songs-list,#terms-list,#streak-days,#quiz-word,#quiz-feedback,#quiz-missed-list,#song-detail-title,#song-detail-artist,#song-detail-chords,#song-detail-lyrics,#favorite-detail-title,#favorite-detail-content,#toast';
   function applyStaticTranslations(){
     if(typeof document==='undefined') return;
@@ -69,5 +100,5 @@
     document.querySelectorAll('option').forEach(option=>{ const key=sourceToKey.get(option.value)||sourceToKey.get(option.textContent.trim()); if(key){ option.value=t(key); option.textContent=t(key); } });
     document.querySelectorAll('[data-language-option]').forEach(button=>{ const active=button.dataset.languageOption===currentLanguage; button.classList.toggle('active',active); button.setAttribute('aria-pressed',String(active)); });
   }
-  return {LANGUAGE_KEY,translations,normalizeLanguage,detectLanguage,loadLanguage,t,formatDate,getDateLabels,getLanguage,setLanguage,applyStaticTranslations};
+  return {LANGUAGE_KEY,BROWSER_SCOPE_KEY,translations,normalizeLanguage,detectLanguage,loadLanguage,t,formatDate,getDateLabels,getLanguage,setLanguage,applyStaticTranslations,getTelegramUserId,getStorageScope,getStorageKey};
 });

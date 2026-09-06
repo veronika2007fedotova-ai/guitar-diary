@@ -49,6 +49,6 @@ test('ручной выбор записывается в localStorage',()=>{
   const storage=new MemoryStorage(), previous=global.localStorage;
   global.localStorage=storage;
   i18n.setLanguage('ru',true);
-  assert.equal(storage.getItem(i18n.LANGUAGE_KEY),'ru');
+  assert.equal(storage.getItem(i18n.getStorageKey(i18n.LANGUAGE_KEY)),'ru');
   global.localStorage=previous;
 });

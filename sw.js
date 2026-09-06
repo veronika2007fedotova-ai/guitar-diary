@@ -1,13 +1,13 @@
 const CACHE_NAME='rifflog-runtime-v1';
 const APP_ROOT=new URL('./',self.registration.scope);
 const OFFLINE_URL=new URL('index.html',APP_ROOT).toString();
-const ASSETS=[APP_ROOT.toString(),OFFLINE_URL,new URL('styles.css',APP_ROOT).toString(),new URL('i18n.js',APP_ROOT).toString(),new URL('backup-utils.js',APP_ROOT).toString(),new URL('app.js',APP_ROOT).toString(),new URL('manifest.json',APP_ROOT).toString(),new URL('icon.svg',APP_ROOT).toString()];
+const ASSETS=[APP_ROOT.toString(),OFFLINE_URL,new URL('styles.css',APP_ROOT).toString(),new URL('i18n.js',APP_ROOT).toString(),new URL('backup-utils.js',APP_ROOT).toString(),new URL('storage-utils.js',APP_ROOT).toString(),new URL('app.js',APP_ROOT).toString(),new URL('manifest.json',APP_ROOT).toString(),new URL('icon.svg',APP_ROOT).toString()];
 
 function isAppRequest(request){
   const url=new URL(request.url);
   if(url.origin!==APP_ROOT.origin || !url.pathname.startsWith(APP_ROOT.pathname)) return false;
   if(request.mode==='navigate') return true;
-  return [APP_ROOT.pathname,`${APP_ROOT.pathname}index.html`,`${APP_ROOT.pathname}app.js`,`${APP_ROOT.pathname}i18n.js`,`${APP_ROOT.pathname}backup-utils.js`,`${APP_ROOT.pathname}styles.css`].includes(url.pathname);
+    return [APP_ROOT.pathname,`${APP_ROOT.pathname}index.html`,`${APP_ROOT.pathname}app.js`,`${APP_ROOT.pathname}i18n.js`,`${APP_ROOT.pathname}backup-utils.js`,`${APP_ROOT.pathname}storage-utils.js`,`${APP_ROOT.pathname}styles.css`].includes(url.pathname);
 }
 
 async function networkFirst(request){
