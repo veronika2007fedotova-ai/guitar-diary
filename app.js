@@ -18,6 +18,7 @@ function renderDebugPanel(){
   let platform='browser',version='unknown',telegramId=null;
   try { const webApp=window.Telegram?.WebApp; platform=webApp?.platform||platform; version=webApp?.version||version; telegramId=appStorage?.getTelegramUserId?.()||null; } catch(error) { initializationError=initializationError||error; }
   const maskedId=telegramId?`••••${String(telegramId).slice(-4)}`:'none';
+  const migration=appStorage?.getMigrationInfo?.()||{};
   const blocking=[...document.querySelectorAll('.modal-backdrop:not(.hidden),#mobile-entry-backdrop.open,#mobile-drawer-scrim:not(.hidden),.mobile-drawer.open')].length>0;
   panel.textContent=[
     'Guitar Diary debug',
@@ -28,8 +29,12 @@ function renderDebugPanel(){
     'cache: rifflog-runtime-v1',
     `storage: ${appStorage?.getBackend?.()||'unavailable'}`,
     `scope: ${appStorage?.getScope?.()||'unknown'}`,
+    `schema: ${migration.schemaVersion||'unknown'}`,
     `service worker: ${typeof navigator!=='undefined'&&navigator.serviceWorker?.controller?'controlled':typeof navigator!=='undefined'&&navigator.serviceWorker?'not controlled':'unsupported'}`,
     `legacy keys: ${appStorage?.getLegacyKeys?.()?.join(', ')||'none'}`,
+    `previous scoped: ${migration.previousScopedKeys?.join(', ')||'none'}`,
+    `migrated: ${migration.migratedKeys?.join(', ')||'none'}`,
+    `migration error: ${migration.migrationError||'none'}`,
     `blocking layer: ${blocking?'active':'none'}`,
     `last error: ${initializationError?errorSummary(initializationError):'none'}`
   ].join('\n');
@@ -54,6 +59,7 @@ const TEST_STATS_KEY = storageKey('rifflog-word-test-stats-v1');
 const SONGS_KEY = storageKey('rifflog-songs-v1');
 const SONG_FONT_SIZE_KEY = storageKey('rifflog-song-font-size-v1');
 const LANGUAGE_KEY = storageKey(i18n.LANGUAGE_KEY);
+i18n.configureLanguagePersistence?.(value=>appStorage.storage.setItem(LANGUAGE_KEY,value));
 const storedLanguage=appStorage.storage.getItem(LANGUAGE_KEY);
 if(i18n.normalizeLanguage(storedLanguage)) i18n.setLanguage(storedLanguage,false);
 const t = (key,values={}) => i18n.t(key,values);
@@ -124,7 +130,7 @@ function loadProfile(){
     }
   } catch(e) {}
   const freshProfile={id:createLocalId('profile'),name:t('defaultName'),startDate:todayKey,weeklyGoal:DEFAULT_WEEKLY_GOAL};
-  appStorage.storage.setItem(PROFILE_KEY,JSON.stringify(freshProfile));
+  if(!appStorage.hasExistingData?.()&&!appStorage.getMigrationInfo?.().migrationError) appStorage.storage.setItem(PROFILE_KEY,JSON.stringify(freshProfile));
   return freshProfile;
 }
 function saveProfile(){ appStorage.storage.setItem(PROFILE_KEY, JSON.stringify(profile)); }
@@ -855,7 +861,7 @@ function getBackupData(){
     testStats:testStats[profile.id]||null,
     visits:getCurrentVisitDays(),
     songFontSize
-  });
+  },new Date(),{schemaVersion:appStorage.getSchemaVersion()||appStorage.STORAGE_SCHEMA_VERSION,appVersion:BUILD_VERSION,ownerTelegramUserId:appStorage.getTelegramUserId()});
 }
 function createBackupFile(){
   const backup=getBackupData(), json=backupTools.serializeBackup(backup), fileName=backupTools.getFileName(), blob=new Blob([json],{type:'application/json;charset=utf-8'});
@@ -943,12 +949,16 @@ function backupImportErrorMessage(error){
     default: return t('backupGeneric');
   }
 }
+function backupOwnerMatches(backup){
+  return backupTools.canImportForUser(backup,appStorage.getTelegramUserId());
+}
 async function importBackupFile(event){
   const input=event.target, file=input.files?.[0]; input.value='';
   if(!file) return;
   if(!/\.json$/i.test(String(file.name||''))&&file.type!=='application/json'){ showToast(t('jsonOnly')); return; }
   try{
     const text=await readBackupFile(file), backup=backupTools.parseBackupText(text);
+    if(!backupOwnerMatches(backup)){ showToast(t('backupOwnerMismatch')); return; }
     if(!window.confirm(t('restoreConfirm'))) return;
     applyImportedState(prepareImportedState(backup.data)); showToast(t('backupRestored'));
   }catch(error){ console.error('Backup import failed',error); showToast(backupImportErrorMessage(error)); }

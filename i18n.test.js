@@ -48,7 +48,9 @@ test('переключение переводит основные элемен�
 test('ручной выбор записывается в localStorage',()=>{
   const storage=new MemoryStorage(), previous=global.localStorage;
   global.localStorage=storage;
+  i18n.configureLanguagePersistence(value=>storage.setItem(i18n.getStorageKey(i18n.LANGUAGE_KEY),value));
   i18n.setLanguage('ru',true);
   assert.equal(storage.getItem(i18n.getStorageKey(i18n.LANGUAGE_KEY)),'ru');
+  i18n.configureLanguagePersistence(null);
   global.localStorage=previous;
 });

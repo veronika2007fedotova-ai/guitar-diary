@@ -26,8 +26,8 @@ class MemoryStorage{
 
 test('создаёт и читает резервную копию без потери Unicode и структуры',()=>{
   const data=sampleData(), createdAt=new Date('2026-09-06T10:20:30.000Z');
-  const result=backup.createBackup(data,createdAt);
-  assert.deepEqual(result,{app:'guitar-diary',backupVersion:1,createdAt:'2026-09-06T10:20:30.000Z',data});
+  const result=backup.createBackup(data,createdAt,{schemaVersion:3,appVersion:'test-build',ownerTelegramUserId:'123456789'});
+  assert.deepEqual(result,{app:'guitar-diary',backupVersion:1,schemaVersion:3,exportDate:'2026-09-06T10:20:30.000Z',appVersion:'test-build',ownerTelegramUserId:'123456789',createdAt:'2026-09-06T10:20:30.000Z',data});
   assert.deepEqual(backup.parseBackupText(backup.serializeBackup(result)),result);
   assert.equal(backup.getFileName(createdAt),'guitar-diary-backup-2026-09-06.json');
 });
@@ -79,6 +79,14 @@ test('сохраняет выбранный язык в резервной ко�
   const data=sampleData();
   const restored=backup.parseBackupText(JSON.stringify(backup.createBackup(data)));
   assert.equal(restored.data.language,'ru');
+  assert.throws(()=>backup.createBackup(data,new Date(),{ownerTelegramUserId:'not-a-telegram-id'}),error=>error.code==='INVALID_DATA');
   assert.throws(()=>backup.createBackup({...data,language:'de'}),error=>error.code==='INVALID_DATA');
   assert.throws(()=>backup.createBackup({...data,entries:{bad:{teacherSession:'yes'}}}),error=>error.code==='INVALID_DATA');
+});
+
+test('разрешает импорт только владельцу backup',()=>{
+  const owned=backup.createBackup(sampleData(),new Date(),{ownerTelegramUserId:'1001'});
+  assert.equal(backup.canImportForUser(owned,'1001'),true);
+  assert.equal(backup.canImportForUser(owned,'2002'),false);
+  assert.equal(backup.canImportForUser(backup.createBackup(sampleData()),'2002'),true);
 });
