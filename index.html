@@ -11,35 +11,13 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 32 32" fill="none"><path d="M19.7 4.6c1.7-1.7 4.6-1.7 6.3 0l1.4 1.4c1.7 1.7 1.7 4.6 0 6.3l-9.7 9.7-6.3-6.3 8.3-8.3Z" stroke="currentColor" stroke-width="2.2"/><path d="m12.1 15.7-4 4m8.5-8.5-4 4M8.2 22.4l-2.7 2.7m13.3-8.3-3 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="m4.5 27.5 4-1 1-4-4 1-1 4Z" fill="currentColor"/></svg>
-        </div>
-        <div><strong>Гитара <span>с Прокопием</span></strong><small>дневник занятий</small></div>
-      </div>
-
-      <nav class="main-nav" aria-label="Основная навигация">
-        <button class="nav-item active" data-view="journal"><span class="nav-icon">▦</span>Мой дневник</button>
-        <button class="nav-item" data-view="stats"><span class="nav-icon">◒</span>Прогресс</button>
-        <button class="nav-item" data-view="library"><span class="nav-icon">♫</span>Материалы</button>
-        <button class="nav-item" data-view="test"><span class="nav-icon">🧠</span>Слова</button>
-        <button class="nav-item" data-view="chords"><span class="nav-icon">🎸</span>Аккорды</button>
-      </nav>
-
-      <div class="sidebar-tip">
-        <div class="tip-icon">✦</div>
-        <p><strong>Маленький шаг каждый день</strong><br><span>10 минут сегодня лучше, чем час когда-нибудь.</span></p>
-      </div>
-
-      <div class="sidebar-bottom">
-        <button class="settings" type="button" data-view="profile"><span>◎</span> Личный кабинет</button>
-      </div>
-    </aside>
-
     <main class="main-content">
+      <section class="storage-recovery hidden" id="storage-recovery" role="alert">
+        <div><span class="eyebrow" id="storage-recovery-title">Найдены старые данные</span><p id="storage-recovery-text">На этом устройстве обнаружены данные прежней версии.</p></div>
+        <button class="outline-button" id="storage-recovery-action" type="button">Восстановить старые данные</button>
+      </section>
       <header class="topbar">
-        <div class="mobile-top-left"><button class="mobile-menu-button" id="mobile-menu-toggle" type="button" aria-label="Открыть навигацию" aria-expanded="false"><span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span></button><div class="mobile-brand"><span class="brand-dot">✦</span><strong>Гитара <span>с Прокопием</span></strong></div></div>
+        <div class="mobile-top-left"><div class="mobile-brand"><span class="brand-dot">✦</span><strong>Гитара <span>с Прокопием</span></strong></div></div>
         <div class="welcome"><span class="eyebrow" id="top-date">ПЯТНИЦА, 4 СЕНТЯБРЯ 2026</span><h1>Привет, <span id="greeting-name">Максим</span> <span>👋</span></h1><a class="telegram-username top-telegram" id="top-telegram-link" hidden target="_blank" rel="noopener noreferrer"></a></div>
         <div class="top-actions"><button class="icon-button progress-icon-button" type="button" data-view="stats" aria-label="Открыть мой прогресс"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="progress-icon-track" cx="18" cy="18" r="13"></circle><circle class="progress-icon-ring" cx="18" cy="18" r="13" pathLength="100"></circle><circle class="progress-icon-center" cx="18" cy="18" r="3"></circle></svg></button><button class="avatar avatar-button" id="user-avatar" type="button" data-view="profile" aria-label="Открыть личный кабинет">МК</button></div>
       </header>
@@ -240,23 +218,15 @@
         </div>
       </section>
     </main>
+    <nav class="bottom-nav" aria-label="Основная навигация">
+      <button class="bottom-nav-item active" data-view="journal" type="button"><span class="nav-icon">▦</span><span>Мой дневник</span></button>
+      <button class="bottom-nav-item" data-view="stats" type="button"><span class="nav-icon">◒</span><span>Прогресс</span></button>
+      <button class="bottom-nav-item" data-view="library" type="button"><span class="nav-icon">♫</span><span>Материалы</span></button>
+      <button class="bottom-nav-item" data-view="test" type="button"><span class="nav-icon">🧠</span><span>Слова</span></button>
+      <button class="bottom-nav-item" data-view="chords" type="button"><span class="nav-icon">🎸</span><span>Аккорды</span></button>
+    </nav>
   </div>
   <div class="mobile-entry-backdrop hidden" id="mobile-entry-backdrop"></div>
-  <div class="mobile-drawer-scrim hidden" id="mobile-drawer-scrim"></div>
-  <aside class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
-    <div class="mobile-drawer-head">
-      <div class="mobile-drawer-brand"><span class="brand-dot">✦</span><strong>Гитара <span>с Прокопием</span></strong></div>
-      <button class="mobile-drawer-close" id="mobile-drawer-close" type="button" aria-label="Закрыть навигацию">×</button>
-    </div>
-    <nav class="mobile-drawer-nav" aria-label="Мобильная навигация">
-      <button class="nav-item active" data-view="journal" type="button"><span class="nav-icon">▦</span>Мой дневник</button>
-      <button class="nav-item" data-view="stats" type="button"><span class="nav-icon">◒</span>Прогресс</button>
-      <button class="nav-item" data-view="library" type="button"><span class="nav-icon">♫</span>Материалы</button>
-      <button class="nav-item" data-view="test" type="button"><span class="nav-icon">🧠</span>Слова</button>
-      <button class="nav-item" data-view="chords" type="button"><span class="nav-icon">🎸</span>Аккорды</button>
-    </nav>
-    <div class="mobile-drawer-foot"><button class="settings" data-view="profile" type="button"><span>◎</span> Личный кабинет</button></div>
-  </aside>
   <aside class="debug-panel hidden" id="debug-panel" aria-live="polite"></aside>
   <div class="toast" id="toast" role="status"></div>
   <div class="modal-backdrop hidden" id="insight-modal" role="presentation">

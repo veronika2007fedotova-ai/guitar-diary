@@ -50,6 +50,49 @@ test('Telegram profiles use isolated storage scopes and do not read legacy keys'
   assert.equal(shared.getItem('rifflog-profile-v1'),'legacy-profile');
 });
 
+test('keeps unowned legacy data hidden until explicit recovery and never deletes its source',async()=>{
+  const legacyProfile=JSON.stringify({id:'old-profile',name:'Старое имя',startDate:'2026-01-01'});
+  const legacyEntries=JSON.stringify({'2026-01-02':{assignment:'Старое задание'}});
+  const local=new MemoryStorage({'rifflog-profile-v1':legacyProfile,'rifflog-entries-v1':legacyEntries});
+  const context=createProfileContext(local,'7007');
+  await context.storage.ready();
+  const profileKey=context.i18n.getStorageKey('rifflog-profile-v1'), entriesKey=context.i18n.getStorageKey('rifflog-entries-v1');
+  assert.equal(context.storage.storage.getItem(profileKey),null);
+  assert.equal(context.storage.storage.getItem(entriesKey),null);
+  assert.equal(context.storage.hasUnassignedLegacyData(),true);
+  const recovered=await context.storage.recoverUnassignedLegacy();
+  assert.equal(recovered.ok,true);
+  assert.deepEqual(Array.from(recovered.keys),['rifflog-entries-v1','rifflog-profile-v1']);
+  assert.equal(context.storage.storage.getItem(profileKey),legacyProfile);
+  assert.equal(context.storage.storage.getItem(entriesKey),legacyEntries);
+  assert.equal(local.getItem('rifflog-profile-v1'),legacyProfile);
+  assert.equal(local.getItem('rifflog-entries-v1'),legacyEntries);
+});
+
+test('does not offer recovery for legacy data that names another owner',async()=>{
+  const local=new MemoryStorage({'rifflog-profile-v1':JSON.stringify({ownerTelegramUserId:'9999',name:'Другой пользователь'})});
+  const context=createProfileContext(local,'7008');
+  await context.storage.ready();
+  assert.equal(context.storage.hasUnassignedLegacyData(),false);
+  assert.notEqual(local.getItem('rifflog-profile-v1'),null);
+});
+
+test('recovery may replace only a fresh profile and keeps startup visit data',async()=>{
+  const profileKey='guitarDiary:user:7009:rifflog-profile-v1', visitsKey='guitarDiary:user:7009:rifflog-visits-v1';
+  const oldProfile=JSON.stringify({id:'old-profile',name:'Старое имя',startDate:'2026-01-01'});
+  const local=new MemoryStorage({
+    'rifflog-profile-v1':oldProfile,
+    [profileKey]:JSON.stringify({id:'fresh-profile',name:'Telegram User',startDate:'2026-09-08',weeklyGoal:180}),
+    [visitsKey]:JSON.stringify({'fresh-profile':['2026-09-08']})
+  });
+  const context=createProfileContext(local,'7009');
+  await context.storage.ready();
+  const recovered=await context.storage.recoverUnassignedLegacy();
+  assert.equal(recovered.ok,true);
+  assert.equal(context.storage.storage.getItem(profileKey),oldProfile);
+  assert.equal(context.storage.storage.getItem(visitsKey),JSON.stringify({'fresh-profile':['2026-09-08']}));
+});
+
 test('hydrates the scoped local mirror from Telegram DeviceStorage',async()=>{
   const local=new MemoryStorage(), device=new Map([['guitarDiary:user:3003:rifflog-profile-v1','device-profile']]);
   const context=createProfileContext(local,'3003',device);

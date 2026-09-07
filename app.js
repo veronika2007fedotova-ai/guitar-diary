@@ -7,11 +7,10 @@ function errorSummary(error){ return String(error?.message||error||'Unknown erro
 function clearBlockingUi(){
   document.documentElement.classList.remove('modal-locked','mobile-entry-locked');
   document.body?.classList.remove('modal-locked','mobile-entry-locked');
-  ['#insight-modal','#favorite-modal','#favorite-detail-modal','#weekly-goal-modal','#mobile-entry-backdrop','#mobile-drawer-scrim'].forEach(selector=>{
+  ['#insight-modal','#favorite-modal','#favorite-detail-modal','#weekly-goal-modal','#mobile-entry-backdrop'].forEach(selector=>{
     const element=document.querySelector(selector); if(!element) return;
     element.classList.add('hidden'); element.classList.remove('open');
   });
-  const drawer=document.querySelector('#mobile-drawer'); drawer?.classList.remove('open'); drawer?.setAttribute('aria-hidden','true');
 }
 function renderDebugPanel(){
   const panel=document.getElementById('debug-panel'); if(!debugMode||!panel) return;
@@ -19,7 +18,8 @@ function renderDebugPanel(){
   try { const webApp=window.Telegram?.WebApp; platform=webApp?.platform||platform; version=webApp?.version||version; telegramId=appStorage?.getTelegramUserId?.()||null; } catch(error) { initializationError=initializationError||error; }
   const maskedId=telegramId?`••••${String(telegramId).slice(-4)}`:'none';
   const migration=appStorage?.getMigrationInfo?.()||{};
-  const blocking=[...document.querySelectorAll('.modal-backdrop:not(.hidden),#mobile-entry-backdrop.open,#mobile-drawer-scrim:not(.hidden),.mobile-drawer.open')].length>0;
+  const recovery=appStorage?.getLegacyRecoveryInfo?.()||{};
+  const blocking=[...document.querySelectorAll('.modal-backdrop:not(.hidden),#mobile-entry-backdrop.open')].length>0;
   panel.textContent=[
     'Guitar Diary debug',
     `build: ${BUILD_VERSION}`,
@@ -32,6 +32,7 @@ function renderDebugPanel(){
     `schema: ${migration.schemaVersion||'unknown'}`,
     `service worker: ${typeof navigator!=='undefined'&&navigator.serviceWorker?.controller?'controlled':typeof navigator!=='undefined'&&navigator.serviceWorker?'not controlled':'unsupported'}`,
     `legacy keys: ${appStorage?.getLegacyKeys?.()?.join(', ')||'none'}`,
+    `legacy recovery: ${recovery.pending?recovery.keys.join(', '):'none'}`,
     `previous scoped: ${migration.previousScopedKeys?.join(', ')||'none'}`,
     `migrated: ${migration.migratedKeys?.join(', ')||'none'}`,
     `migration error: ${migration.migrationError||'none'}`,
@@ -90,6 +91,7 @@ let now = new Date();
 let todayKey = toKey(now);
 let selectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 let calendarDate = new Date(now.getFullYear(), now.getMonth(), 1);
+let profileIsFresh=false;
 let profile = loadProfile();
 applyTelegramProfile();
 let dailyInsights = loadInsights();
@@ -130,7 +132,8 @@ function loadProfile(){
     }
   } catch(e) {}
   const freshProfile={id:createLocalId('profile'),name:t('defaultName'),startDate:todayKey,weeklyGoal:DEFAULT_WEEKLY_GOAL};
-  if(!appStorage.hasExistingData?.()&&!appStorage.getMigrationInfo?.().migrationError) appStorage.storage.setItem(PROFILE_KEY,JSON.stringify(freshProfile));
+  profileIsFresh=true;
+  if(!appStorage.hasExistingData?.()&&!appStorage.hasUnassignedLegacyData?.()&&!appStorage.getMigrationInfo?.().migrationError) appStorage.storage.setItem(PROFILE_KEY,JSON.stringify(freshProfile));
   return freshProfile;
 }
 function saveProfile(){ appStorage.storage.setItem(PROFILE_KEY, JSON.stringify(profile)); }
@@ -252,7 +255,7 @@ function applyTelegramProfile(){
   const telegramName=[telegramUser.first_name,telegramUser.last_name].filter(Boolean).join(' ').trim();
   if(telegramName) profile.name=telegramName;
   if(telegramUser.username) profile.telegramUsername=telegramUser.username; else delete profile.telegramUsername;
-  saveProfile();
+  if(!profileIsFresh||!appStorage.hasUnassignedLegacyData?.()) saveProfile();
 }
 function updateTodayUi(){
   el('top-date').textContent=`${WEEKDAYS_LONG[now.getDay()]}, ${now.getDate()} ${MONTHS_GEN[now.getMonth()].toUpperCase()} ${now.getFullYear()}`;
@@ -268,10 +271,6 @@ function loadEntries(){
   try {
     const stored = JSON.parse(appStorage.storage.getItem(STORAGE_KEY));
     if(stored && typeof stored==='object'){
-      const starterAssignments=['Хроматическая разминка: 1–2–3–4 на каждой струне.','Бой восьмёрка под метроном 72 bpm.','Аккорды Am — F — C — G, по 2 минуты.','Пентатоника Ля минор в пяти позициях.'];
-      const keys=Object.keys(stored);
-      const isOldDemo=keys.length>0&&keys.length<=4&&keys.every(key=>stored[key]&&starterAssignments.includes(stored[key].assignment));
-      if(isOldDemo){ appStorage.storage.removeItem(STORAGE_KEY); return {}; }
       return stored;
     }
   } catch(e) {}
@@ -286,6 +285,13 @@ function loadVisits(){
   return {};
 }
 function saveVisits(){ appStorage.storage.setItem(VISITS_KEY,JSON.stringify(visitDays)); }
+function renderStorageRecovery(){
+  const panel=el('storage-recovery'), info=appStorage.getLegacyRecoveryInfo?.(); if(!panel) return;
+  const pending=Boolean(info?.pending); panel.classList.toggle('hidden',!pending); if(!pending) return;
+  el('storage-recovery-title').textContent=t('storageRecoveryTitle');
+  el('storage-recovery-text').textContent=t('storageRecoveryText');
+  el('storage-recovery-action').textContent=t('storageRecoveryButton');
+}
 function getCurrentVisitDays(){ return Array.isArray(visitDays[profile.id])?visitDays[profile.id]:[]; }
 function hasVisited(key){ return getCurrentVisitDays().includes(key); }
 function dayWord(count){
@@ -383,7 +389,7 @@ function calcStats(){
   renderProgress();
 }
 function showToast(message){ const toast=el('toast'); toast.textContent=message; toast.classList.add('show'); clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.classList.remove('show'),2200); }
-function switchView(view){ if(view!=='journal') closeMobileEntry(); document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden')); el(`${view}-view`).classList.remove('hidden'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view)); if(view==='stats') renderProgress(); if(view==='test'){ renderTerms(); renderWordStats(); } if(view==='chords') renderSongs(); window.scrollTo(0,0); }
+function switchView(view){ if(view!=='journal') closeMobileEntry(); document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden')); el(`${view}-view`).classList.remove('hidden'); document.querySelectorAll('.nav-item,.bottom-nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view)); if(view==='stats') renderProgress(); if(view==='test'){ renderTerms(); renderWordStats(); } if(view==='chords') renderSongs(); window.scrollTo(0,0); }
 function setModalPageLock(locked){ document.documentElement.classList.toggle('modal-locked',locked); document.body.classList.toggle('modal-locked',locked); }
 function setMobileEntry(open){
   const entry=el('entry-panel'), backdrop=el('mobile-entry-backdrop'); if(!entry||!backdrop) return;
@@ -391,14 +397,6 @@ function setMobileEntry(open){
 }
 function openMobileEntry(){ setMobileEntry(true); }
 function closeMobileEntry(){ setMobileEntry(false); }
-function setMobileDrawer(open){
-  const drawer=el('mobile-drawer'), scrim=el('mobile-drawer-scrim'), toggle=el('mobile-menu-toggle');
-  if(!drawer || !scrim) return;
-  drawer.classList.toggle('open',open); drawer.setAttribute('aria-hidden',String(!open)); scrim.classList.toggle('hidden',!open);
-  if(toggle) toggle.setAttribute('aria-expanded',String(open));
-}
-function closeMobileDrawer(){ setMobileDrawer(false); }
-
 function renderProfile(){
   el('profile-name').value=profile.name;
   el('profile-start-date').value=profile.startDate;
@@ -713,6 +711,7 @@ function refreshLocalizedView(){
   if(quizState.screen==='question') renderQuizFeedback();
   else if(quizState.screen==='result') renderQuizResult();
   else renderQuizStart();
+  renderStorageRecovery();
 }
 
 el('entry-form').addEventListener('submit',e=>{ e.preventDefault(); const key=toKey(selectedDate); if(key<profile.startDate){ showToast(t('startDateRequired')); return; } const training=el('training').value.trim(), assignment=el('assignment').value.trim(), teacherSession=el('teacher-session').checked; if(!training && !assignment && !el('minutes').value&&!teacherSession){ showToast(t('entryRequired')); return; } const previousEntry=entries[key]||{}; entries[key]={...previousEntry,training,assignment,minutes:Number(el('minutes').value)||0,progress:Number(el('progress').value)||0,teacherSession}; saveEntries(); renderCalendar(); renderForm(); renderRecent(); calcStats(); closeMobileEntry(); showToast(t('entrySaved')); });
@@ -727,7 +726,7 @@ el('prev-month').addEventListener('click',()=>{ calendarDate.setMonth(calendarDa
 el('next-month').addEventListener('click',()=>{ calendarDate.setMonth(calendarDate.getMonth()+1); renderCalendar(); });
 el('today-button').addEventListener('click',()=>{ selectedDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()); calendarDate=new Date(now.getFullYear(),now.getMonth(),1); renderCalendar(); renderForm(); if(window.matchMedia('(max-width:700px)').matches) openMobileEntry(); });
 el('show-all').addEventListener('click',()=>{ document.querySelector('.recent-section').scrollIntoView({behavior:'smooth'}); });
-document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{ if(btn.dataset.view==='profile') renderProfile(); switchView(btn.dataset.view); if(btn.closest('.mobile-drawer')) closeMobileDrawer(); }));
+document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{ if(btn.dataset.view==='profile') renderProfile(); switchView(btn.dataset.view); }));
 document.querySelectorAll('[data-go-journal]').forEach(btn=>btn.addEventListener('click',()=>switchView('journal')));
 document.querySelectorAll('[data-test-mode]').forEach(btn=>btn.addEventListener('click',()=>setTestMode(btn.dataset.testMode)));
 el('song-search').addEventListener('input',event=>{ songSearchQuery=event.target.value; renderSongs(); });
@@ -777,13 +776,10 @@ el('quiz-self-correct').addEventListener('click',acceptSelfCorrectAnswer);
 el('quiz-next').addEventListener('click',nextQuizQuestion);
 el('quiz-answer').addEventListener('keydown',event=>{ if((event.ctrlKey||event.metaKey)&&event.key==='Enter') submitQuizAnswer(); });
 el('quiz-retry').addEventListener('click',()=>startQuiz(quizState.selection,quizState.repeatOnly,quizState.baseFilter));
-el('mobile-menu-toggle').addEventListener('click',()=>setMobileDrawer(true));
-el('mobile-drawer-close').addEventListener('click',closeMobileDrawer);
-el('mobile-drawer-scrim').addEventListener('click',closeMobileDrawer);
 el('mobile-entry-open').addEventListener('click',openMobileEntry);
 el('mobile-entry-close').addEventListener('click',closeMobileEntry);
 el('mobile-entry-backdrop').addEventListener('click',closeMobileEntry);
-document.addEventListener('keydown',event=>{ if(event.key==='Escape'){ closeMobileDrawer(); closeMobileEntry(); closeWeeklyGoalModal(); closeInsightModal(); closeFavoriteModal(); closeFavoriteDetail(); } });
+document.addEventListener('keydown',event=>{ if(event.key==='Escape'){ closeMobileEntry(); closeWeeklyGoalModal(); closeInsightModal(); closeFavoriteModal(); closeFavoriteDetail(); } });
 el('insight-edit').addEventListener('click',()=>openInsightModal(todayKey));
 el('insight-delete').addEventListener('click',()=>removeInsight(todayKey));
 el('new-insight').addEventListener('click',()=>openInsightModal(toKey(selectedDate)));
@@ -844,6 +840,7 @@ renderTerms();
 renderWordStats();
 renderCalendar(); renderForm(); renderRecent(); calcStats();
 refreshLocalizedView();
+renderStorageRecovery();
 setInterval(refreshToday,60000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshToday(); });
 renderDebugPanel();
@@ -967,6 +964,13 @@ async function importBackupFile(event){
 el('export-data').addEventListener('click',exportBackup);
 el('import-data').addEventListener('click',()=>el('import-file').click());
 el('import-file').addEventListener('change',importBackupFile);
+el('storage-recovery-action').addEventListener('click',async()=>{
+  if(!window.confirm(t('storageRecoveryConfirm'))) return;
+  const button=el('storage-recovery-action'); button.disabled=true;
+  const result=await appStorage.recoverUnassignedLegacy?.();
+  if(!result?.ok){ button.disabled=false; showToast(t('storageRecoveryFailed')); return; }
+  showToast(t('storageRecoverySuccess')); window.location.reload();
+});
 if('serviceWorker' in navigator && location.protocol!=='file:'){
   const hadController=Boolean(navigator.serviceWorker.controller); let refreshing=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(!hadController||refreshing) return; refreshing=true; window.location.reload(); });
