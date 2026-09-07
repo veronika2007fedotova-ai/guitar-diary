@@ -18,7 +18,7 @@ function createProfileContext(storage,userId,deviceValues){
     localStorage:storage,
     navigator:{language:'en-US'},
     crypto:{randomUUID:()=>`test-${userId}`},
-    Telegram:{WebApp:{initDataUnsafe:{user:{id:userId}},...(deviceValues?{DeviceStorage:{
+    Telegram:{WebApp:{platform:'android',initDataUnsafe:{user:{id:userId}},...(deviceValues?{DeviceStorage:{
       getItem(key,callback){ callback(null,deviceValues.has(key)?deviceValues.get(key):null); },
       setItem(key,value,callback){ if(deviceValues.failWrites) throw new Error('device write failed'); deviceValues.set(key,String(value)); callback?.(null); },
       removeItem(key,callback){ deviceValues.delete(key); callback?.(null); }
@@ -31,6 +31,18 @@ function createProfileContext(storage,userId,deviceValues){
   vm.runInContext(storageSource,context);
   return {i18n:window.GuitarDiaryI18n,storage:window.GuitarDiaryStorage};
 }
+
+test('blocks the browser namespace in Telegram when user id is unavailable',async()=>{
+  const legacyProfile=JSON.stringify({name:'Чужой профиль'}), local=new MemoryStorage({'rifflog-profile-v1':legacyProfile});
+  const context=createProfileContext(local,null);
+  await context.storage.ready();
+  assert.equal(context.storage.getBackend(),'blocked');
+  assert.equal(context.storage.getScope(),'telegram-unidentified');
+  assert.equal(context.storage.storage.getItem('guitarDiary:telegram-unidentified:rifflog-profile-v1'),null);
+  assert.equal(local.getItem('rifflog-profile-v1'),legacyProfile);
+  assert.equal(local.getItem('rifflog-browser-scope-v1'),null);
+  assert.equal(context.storage.hasUnassignedLegacyData(),false);
+});
 
 test('Telegram profiles use isolated storage scopes and do not read legacy keys',async()=>{
   const shared=new MemoryStorage({'rifflog-profile-v1':'legacy-profile'});
@@ -75,6 +87,15 @@ test('does not offer recovery for legacy data that names another owner',async()=
   await context.storage.ready();
   assert.equal(context.storage.hasUnassignedLegacyData(),false);
   assert.notEqual(local.getItem('rifflog-profile-v1'),null);
+});
+
+test('does not automatically migrate a legacy block even when its owner matches',async()=>{
+  const legacyProfile=JSON.stringify({ownerTelegramUserId:'7010',name:'Мой старый профиль'}), local=new MemoryStorage({'rifflog-profile-v1':legacyProfile});
+  const context=createProfileContext(local,'7010');
+  await context.storage.ready();
+  assert.equal(context.storage.storage.getItem('guitarDiary:user:7010:rifflog-profile-v1'),null);
+  assert.deepEqual(Array.from(context.storage.getMigrationInfo().ownerMatchedLegacyKeys),['rifflog-profile-v1']);
+  assert.equal(local.getItem('rifflog-profile-v1'),legacyProfile);
 });
 
 test('recovery may replace only a fresh profile and keeps startup visit data',async()=>{

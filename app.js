@@ -1,9 +1,26 @@
 (() => {
 const appStorage=window.GuitarDiaryStorage;
 const debugMode=new URLSearchParams(window.location.search).get('debug')==='1';
-const BUILD_VERSION='2026.09.06-audit-1';
+const BUILD_VERSION='2026.09.08-cache-audit-1';
 let initializationError=null;
+let storageDiagnostics=null;
 function errorSummary(error){ return String(error?.message||error||'Unknown error').replace(/\s+/g,' ').slice(0,180); }
+function maskDiagnosticKey(key){
+  return String(key||'').replace(/(guitarDiary:(?:user|telegram)-?)[^:]+/g,'$1••••').replace(/(guitarDiary:browser-)[^:]+/g,'$1••••');
+}
+function formatDiagnosticStorage(audit){
+  if(!audit?.available) return 'unavailable';
+  const blocks=Array.isArray(audit.keys)?audit.keys:[];
+  if(!blocks.length) return '0 blocks';
+  const details=blocks.slice(0,6).map(block=>`${maskDiagnosticKey(block.key)} ${block.size}b ${block.shape}${block.ownerId&&block.ownerId!=='none'?` owner=${block.ownerId}`:''}${block.schemaVersion!==null&&block.schemaVersion!==undefined?` schema=${block.schemaVersion}`:''}`).join('; ');
+  return `${blocks.length} blocks: ${details}${blocks.length>6?' …':''}`;
+}
+function formatCacheDiagnostics(audit){
+  if(!audit?.available) return 'unavailable';
+  const caches=Array.isArray(audit.caches)?audit.caches:[];
+  if(!caches.length) return '0 caches';
+  return caches.map(cache=>`${cache.name} (${cache.urls.length} urls${cache.assets?.length?`; ${cache.assets.map(asset=>`${asset.file}:${asset.markers.join(',')||'no marker'}`).join(', ')}`:''})`).join('; ');
+}
 function clearBlockingUi(){
   document.documentElement.classList.remove('modal-locked','mobile-entry-locked');
   document.body?.classList.remove('modal-locked','mobile-entry-locked');
@@ -33,11 +50,20 @@ function renderDebugPanel(){
     `service worker: ${typeof navigator!=='undefined'&&navigator.serviceWorker?.controller?'controlled':typeof navigator!=='undefined'&&navigator.serviceWorker?'not controlled':'unsupported'}`,
     `legacy keys: ${appStorage?.getLegacyKeys?.()?.join(', ')||'none'}`,
     `legacy recovery: ${recovery.pending?recovery.keys.join(', '):'none'}`,
+    `owner-matched legacy (not migrated): ${migration.ownerMatchedLegacyKeys?.join(', ')||'none'}`,
+    `foreign legacy (not loaded): ${migration.foreignLegacyKeys?.join(', ')||'none'}`,
     `previous scoped: ${migration.previousScopedKeys?.join(', ')||'none'}`,
     `migrated: ${migration.migratedKeys?.join(', ')||'none'}`,
     `migration error: ${migration.migrationError||'none'}`,
     `blocking layer: ${blocking?'active':'none'}`,
-    `last error: ${initializationError?errorSummary(initializationError):'none'}`
+    `last error: ${initializationError?errorSummary(initializationError):'none'}`,
+    `audit localStorage: ${formatDiagnosticStorage(storageDiagnostics?.localStorage)}`,
+    `audit sessionStorage: ${formatDiagnosticStorage(storageDiagnostics?.sessionStorage)}`,
+    `audit IndexedDB: ${storageDiagnostics?.indexedDB?.available?(storageDiagnostics.indexedDB.databases||[]).map(database=>`${database.name} [${database.stores.join(', ')||'no stores'}]`).join('; ')||'0 databases':'unavailable'}`,
+    `audit DeviceStorage: ${formatDiagnosticStorage(storageDiagnostics?.deviceStorage)}`,
+    `audit Cache Storage: ${formatCacheDiagnostics(storageDiagnostics?.cacheStorage)}`,
+    `namespaces: ${storageDiagnostics?.namespaces?.join(', ')||'none'}`,
+    `audit status: ${storageDiagnostics?'read-only complete':'pending'}`
   ].join('\n');
   panel.classList.remove('hidden');
 }
@@ -45,6 +71,11 @@ function recordInitializationError(error){ initializationError=initializationErr
 function handleInitFailure(error){ clearBlockingUi(); recordInitializationError(error); renderDebugPanel(); }
 window.addEventListener('error',event=>recordInitializationError(event.error||event.message));
 window.addEventListener('unhandledrejection',event=>recordInitializationError(event.reason));
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  const hadController=Boolean(navigator.serviceWorker.controller); let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(!hadController||refreshing) return; refreshing=true; window.location.reload(); });
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).then(registration=>registration.update()).catch(error=>recordInitializationError(error)); });
+}
 function initApp(){
 const i18n = window.GuitarDiaryI18n;
 const backupTools = window.GuitarDiaryBackup;
@@ -255,7 +286,7 @@ function applyTelegramProfile(){
   const telegramName=[telegramUser.first_name,telegramUser.last_name].filter(Boolean).join(' ').trim();
   if(telegramName) profile.name=telegramName;
   if(telegramUser.username) profile.telegramUsername=telegramUser.username; else delete profile.telegramUsername;
-  if(!profileIsFresh||!appStorage.hasUnassignedLegacyData?.()) saveProfile();
+  if(!profileIsFresh||(!appStorage.hasUnassignedLegacyData?.()&&appStorage.getBackend?.()!=='blocked')) saveProfile();
 }
 function updateTodayUi(){
   el('top-date').textContent=`${WEEKDAYS_LONG[now.getDay()]}, ${now.getDate()} ${MONTHS_GEN[now.getMonth()].toUpperCase()} ${now.getFullYear()}`;
@@ -711,7 +742,6 @@ function refreshLocalizedView(){
   if(quizState.screen==='question') renderQuizFeedback();
   else if(quizState.screen==='result') renderQuizResult();
   else renderQuizStart();
-  renderStorageRecovery();
 }
 
 el('entry-form').addEventListener('submit',e=>{ e.preventDefault(); const key=toKey(selectedDate); if(key<profile.startDate){ showToast(t('startDateRequired')); return; } const training=el('training').value.trim(), assignment=el('assignment').value.trim(), teacherSession=el('teacher-session').checked; if(!training && !assignment && !el('minutes').value&&!teacherSession){ showToast(t('entryRequired')); return; } const previousEntry=entries[key]||{}; entries[key]={...previousEntry,training,assignment,minutes:Number(el('minutes').value)||0,progress:Number(el('progress').value)||0,teacherSession}; saveEntries(); renderCalendar(); renderForm(); renderRecent(); calcStats(); closeMobileEntry(); showToast(t('entrySaved')); });
@@ -840,10 +870,10 @@ renderTerms();
 renderWordStats();
 renderCalendar(); renderForm(); renderRecent(); calcStats();
 refreshLocalizedView();
-renderStorageRecovery();
 setInterval(refreshToday,60000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshToday(); });
 renderDebugPanel();
+if(debugMode&&appStorage.getDiagnostics) appStorage.getDiagnostics().then(diagnostics=>{ storageDiagnostics=diagnostics; renderDebugPanel(); }).catch(recordInitializationError);
 
 function getBackupData(){
   if(!backupTools) throw new Error('Модуль резервного копирования недоступен.');
@@ -947,7 +977,9 @@ function backupImportErrorMessage(error){
   }
 }
 function backupOwnerMatches(backup){
-  return backupTools.canImportForUser(backup,appStorage.getTelegramUserId());
+  const currentUserId=appStorage.getTelegramUserId?.();
+  if(i18n.isTelegramContext?.()) return Boolean(currentUserId&&/^\d+$/.test(String(backup?.ownerTelegramUserId||''))&&String(backup.ownerTelegramUserId)===String(currentUserId));
+  return backupTools.canImportForUser(backup,currentUserId);
 }
 async function importBackupFile(event){
   const input=event.target, file=input.files?.[0]; input.value='';
@@ -964,18 +996,6 @@ async function importBackupFile(event){
 el('export-data').addEventListener('click',exportBackup);
 el('import-data').addEventListener('click',()=>el('import-file').click());
 el('import-file').addEventListener('change',importBackupFile);
-el('storage-recovery-action').addEventListener('click',async()=>{
-  if(!window.confirm(t('storageRecoveryConfirm'))) return;
-  const button=el('storage-recovery-action'); button.disabled=true;
-  const result=await appStorage.recoverUnassignedLegacy?.();
-  if(!result?.ok){ button.disabled=false; showToast(t('storageRecoveryFailed')); return; }
-  showToast(t('storageRecoverySuccess')); window.location.reload();
-});
-if('serviceWorker' in navigator && location.protocol!=='file:'){
-  const hadController=Boolean(navigator.serviceWorker.controller); let refreshing=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(!hadController||refreshing) return; refreshing=true; window.location.reload(); });
-  window.addEventListener('load',()=>{ navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}); });
-}
 }
 if(!appStorage||typeof appStorage.ready!=='function') handleInitFailure(new Error('Storage adapter unavailable'));
 else appStorage.ready(initApp).catch(handleInitFailure);

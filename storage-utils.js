@@ -13,18 +13,20 @@
   const baseKeys=['rifflog-entries-v1','rifflog-visits-v1','rifflog-profile-v1','rifflog-insights-v1','rifflog-favorites-v1','rifflog-terms-v1','rifflog-word-test-stats-v1','rifflog-songs-v1','rifflog-song-font-size-v1','rifflog-language-v1'];
   const memory=new Map(), fallbackValues=new Map();
   let localStorageRef=null, deviceStorage=null, backend='localStorage', lastError='', migrationError='', migrationSteps=[];
-  let legacyKeys=[], previousScopedKeys=[], migratedKeys=[], existingData=false, unassignedLegacyKeys=[];
+  let legacyKeys=[], previousScopedKeys=[], migratedKeys=[], existingData=false, unassignedLegacyKeys=[], ownerMatchedLegacyKeys=[], foreignLegacyKeys=[];
   const unassignedLegacyValues=new Map();
   const userId=()=>i18n?.getTelegramUserId?.()||null;
+  const telegramContext=()=>Boolean(i18n?.isTelegramContext?.());
+  const storageBlocked=()=>telegramContext()&&!userId();
   try {
     const candidate=root?.localStorage;
     if(candidate&&typeof candidate.getItem==='function'&&typeof candidate.setItem==='function'&&typeof candidate.removeItem==='function') localStorageRef=candidate;
   } catch(error) { lastError='localStorage недоступен'; }
   try {
-    const candidate=root?.Telegram?.WebApp?.DeviceStorage;
+    const candidate=storageBlocked()?null:root?.Telegram?.WebApp?.DeviceStorage;
     if(candidate&&typeof candidate.getItem==='function'&&typeof candidate.setItem==='function'&&typeof candidate.removeItem==='function') deviceStorage=candidate;
   } catch(error) { lastError='DeviceStorage недоступен'; }
-  if(!userId()) deviceStorage=null;
+  if(!userId()||storageBlocked()) deviceStorage=null;
   const currentKey=key=>i18n?.getStorageKey?i18n.getStorageKey(key):key;
   const previousKey=key=>i18n?.getPreviousStorageKey?i18n.getPreviousStorageKey(key):key;
   let schemaKey='', lastGoodKey='', legacyRecoveryKey='';
@@ -41,7 +43,7 @@
     try { localStorageRef?.removeItem(key); } catch(error) { lastError='Ошибка удаления localStorage'; }
   }
   function configureStorageScope(){
-    if(!userId()){
+    if(!userId()&&!telegramContext()){
       let scope=readLocalRaw(BROWSER_SCOPE_KEY);
       if(!/^browser-[a-z0-9_-]+$/i.test(String(scope||''))){
         const random=root?.crypto?.randomUUID?.()||`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`;
@@ -70,11 +72,6 @@
     const candidates=[parsed.ownerTelegramUserId,parsed.telegramUserId,parsed.ownerId,parsed.userId,parsed.profile?.ownerTelegramUserId,parsed.profile?.telegramUserId];
     return candidates.find(candidate=>/^\d+$/.test(String(candidate||'')))||null;
   }
-  function unwrapOwnedValue(value){
-    const parsed=parseValue(value);
-    if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)&&parsed.data!==undefined&&ownerFromValue(parsed)) return JSON.stringify(parsed.data);
-    return value;
-  }
   function callDevice(method,key,value){
     return new Promise((resolve,reject)=>{
       let settled=false;
@@ -101,7 +98,13 @@
     writeLocalRaw(LEGACY_UNASSIGNED_KEY,JSON.stringify({schemaVersion:1,keys:all,detectedAt:previous?.detectedAt||new Date().toISOString()}));
   }
   async function loadOrMigrateUserData(currentUserId=userId()){
-    legacyKeys=[]; previousScopedKeys=[]; migratedKeys=[]; unassignedLegacyKeys=[]; unassignedLegacyValues.clear();
+    legacyKeys=[]; previousScopedKeys=[]; migratedKeys=[]; existingData=false; unassignedLegacyKeys=[]; ownerMatchedLegacyKeys=[]; foreignLegacyKeys=[]; unassignedLegacyValues.clear();
+    if(storageBlocked()){
+      backend='blocked';
+      migrationError='Telegram user ID недоступен: пользовательские данные заблокированы';
+      lastError=migrationError;
+      return {userId:null,schemaVersion:0,existingData:false,legacyKeys:[],previousScopedKeys:[],migratedKeys:[],migrationError,backend};
+    }
     const values=new Map(), deviceValues=new Map(), oldValues=new Map(), oldDeviceValues=new Map(), legacyLocalValues=new Map(), legacyDeviceValues=new Map();
     for(const key of baseKeys){
       values.set(key,readLocalRaw(currentKey(key)));
@@ -126,13 +129,17 @@
     const deviceLegacyKeys=collectLegacyKeys(legacyDeviceValues);
     const allLegacyKeys=[...new Set([...legacyKeys,...deviceLegacyKeys])];
     if(allLegacyKeys.length){
-      const owned=allLegacyKeys.every(key=>{
+      const owned=Boolean(currentUserId)&&allLegacyKeys.every(key=>{
         const localOwner=ownerFromValue(legacyLocalValues.get(key)), deviceOwner=ownerFromValue(legacyDeviceValues.get(key));
         return String(localOwner||deviceOwner||'')===String(currentUserId||'');
       });
       const hasAnyOwner=allLegacyKeys.some(key=>Boolean(ownerFromValue(legacyLocalValues.get(key))||ownerFromValue(legacyDeviceValues.get(key))));
       if(!owned){
         if(hasAnyOwner){
+          foreignLegacyKeys=allLegacyKeys.filter(key=>{
+            const owner=ownerFromValue(legacyDeviceValues.get(key))||ownerFromValue(legacyLocalValues.get(key));
+            return Boolean(owner)&&String(owner)!==String(currentUserId||'');
+          });
           markLegacyUnassigned(allLegacyKeys);
         } else {
           unassignedLegacyKeys=allLegacyKeys.slice();
@@ -143,8 +150,7 @@
           markLegacyUnassigned(allLegacyKeys);
           writeLocalRaw(legacyRecoveryKey,JSON.stringify({schemaVersion:1,status:'pending',keys:unassignedLegacyKeys,detectedAt:new Date().toISOString()}));
         }
-      }
-      else allLegacyKeys.forEach(key=>{ const value=legacyDeviceValues.get(key)??legacyLocalValues.get(key); if(hasDataValue(value)) values.set(key,unwrapOwnedValue(value)); });
+      } else ownerMatchedLegacyKeys=allLegacyKeys.slice();
     }
     previousScopedKeys=baseKeys.filter(key=>hasDataValue(oldValues.get(key))||hasDataValue(oldDeviceValues.get(key)));
     const localSchema=Number(readLocalRaw(schemaKey))||0;
@@ -159,7 +165,6 @@
       else if(hasDataValue(deviceValue)){ value=deviceValue; source='current-device'; }
       else if(hasDataValue(oldDevice)){ value=oldDevice; source='previous-device'; }
       else if(hasDataValue(oldLocal)){ value=oldLocal; source='previous-local'; }
-      else if(hasDataValue(values.get(key))){ value=values.get(key); source='owned-legacy'; }
       if(value!==null){ selected.set(key,{value,source}); existingData=true; if(source.startsWith('previous')||source==='owned-legacy') migratedKeys.push(key); }
     });
     const lastGoodLocal=parseValue(readLocalRaw(lastGoodKey)), lastGoodDevice=deviceStorage?parseValue(deviceValues.get(LAST_GOOD_KEY)):null;
@@ -234,6 +239,7 @@
     }
   }
   function readItem(key){
+    if(storageBlocked()) return null;
     const local=readLocalRaw(key); return local!==null&&local!==undefined?local:(fallbackValues.has(key)?fallbackValues.get(key):null);
   }
   function updateLastGood(key,value){
@@ -247,10 +253,12 @@
   const storage={
     getItem(key){ return readItem(key); },
     setItem(key,value){
+      if(storageBlocked()){ lastError='Запись заблокирована: Telegram user ID недоступен'; return; }
       writeLocalRaw(key,value); fallbackValues.delete(key); updateLastGood(key,value);
       if(deviceStorage&&backend==='DeviceStorage') callDevice('setItem',key,String(value)).catch(()=>{ lastError='Не удалось синхронизировать DeviceStorage'; });
     },
     removeItem(key){
+      if(storageBlocked()){ lastError='Удаление заблокировано: Telegram user ID недоступен'; return; }
       removeLocalRaw(key); fallbackValues.delete(key);
       if(deviceStorage&&backend==='DeviceStorage') callDevice('removeItem',key).catch(()=>{ lastError='Не удалось синхронизировать DeviceStorage'; });
     }
@@ -258,7 +266,110 @@
   const readyPromise=loadOrMigrateUserData();
   function getLegacyKeys(){ return legacyKeys.slice(); }
   function getPreviousScopedKeys(){ return previousScopedKeys.slice(); }
-  function getMigrationInfo(){ return {schemaVersion:STORAGE_SCHEMA_VERSION,migratedKeys:[...new Set(migratedKeys)],migrationError,existingData,legacyKeys:getLegacyKeys(),previousScopedKeys:getPreviousScopedKeys(),unassignedLegacyKeys:unassignedLegacyKeys.slice()}; }
+  function getMigrationInfo(){ return {schemaVersion:Number(readItem(schemaKey))||0,migratedKeys:[...new Set(migratedKeys)],migrationError,existingData,legacyKeys:getLegacyKeys(),previousScopedKeys:getPreviousScopedKeys(),unassignedLegacyKeys:unassignedLegacyKeys.slice(),ownerMatchedLegacyKeys:ownerMatchedLegacyKeys.slice(),foreignLegacyKeys:foreignLegacyKeys.slice()}; }
+  function maskIdentifier(value){ const normalized=String(value||''); return normalized?`••••${normalized.slice(-4)}`:'none'; }
+  function byteSize(value){ try{ return new TextEncoder().encode(String(value??'')).length; }catch(error){ return String(value??'').length; } }
+  function valueSummary(key,value){
+    const parsed=parseValue(value), shape=Array.isArray(parsed)?'array':parsed&&typeof parsed==='object'?'object':typeof parsed;
+    const owner=ownerFromValue(value), modified=parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?(parsed.lastModified||parsed.updatedAt||parsed.createdAt||parsed.exportDate||parsed.detectedAt||parsed.meta?.lastModified||null):null;
+    return {key,size:byteSize(value),shape,fields:parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?Object.keys(parsed).slice(0,12):[],ownerId:maskIdentifier(owner),schemaVersion:parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?(parsed.schemaVersion??null):null,lastModified:modified?String(modified):null};
+  }
+  function storageKeys(storageRef){
+    if(!storageRef||typeof storageRef.length!=='number'||typeof storageRef.key!=='function') return [];
+    const keys=[]; for(let index=0;index<storageRef.length;index++){ try{ const key=storageRef.key(index); if(key) keys.push(key); }catch(error){ lastError='Ошибка перечисления storage'; } }
+    return keys;
+  }
+  function diagnosticCandidates(){
+    const keys=[...baseKeys,SCHEMA_VERSION_KEY,LAST_GOOD_KEY,LEGACY_UNASSIGNED_KEY,LEGACY_RECOVERY_KEY,BROWSER_SCOPE_KEY];
+    return [...new Set([...keys,...baseKeys.map(key=>currentKey(key)),...baseKeys.map(key=>previousKey(key)),schemaKey,lastGoodKey,legacyRecoveryKey].filter(Boolean))];
+  }
+  function auditStorage(storageRef,knownKeys=[]){
+    if(!storageRef||typeof storageRef.getItem!=='function') return {available:false,keys:[]};
+    const keys=[...new Set([...storageKeys(storageRef),...knownKeys])], blocks=[];
+    keys.forEach(key=>{ try{ const value=storageRef.getItem(key); if(value!==null&&value!==undefined) blocks.push(valueSummary(key,value)); }catch(error){ lastError='Ошибка аудита storage'; } });
+    return {available:true,keys:blocks};
+  }
+  function maskedNamespace(key){
+    const match=String(key).match(/^(guitarDiary:(?:user|telegram)-?)([^:]+)(?=:|$)/);
+    if(match) return `${match[1]}••••${String(match[2]).slice(-4)}`;
+    const browser=String(key).match(/^(guitarDiary:browser-)[^:]+/); if(browser) return `${browser[1]}••••`;
+    if(String(key).startsWith('guitarDiary:legacy-unassigned')) return 'guitarDiary:legacy-unassigned';
+    return null;
+  }
+  function readDeviceForAudit(api,key){
+    return new Promise(resolve=>{
+      let settled=false; const finish=value=>{ if(settled) return; settled=true; clearTimeout(timer); resolve(value===undefined||value===null?null:value); };
+      const timer=setTimeout(()=>finish(null),900);
+      try{
+        const result=api.getItem(key,(error,value)=>finish(error?null:value));
+        if(result instanceof Promise) result.then(finish,()=>finish(null));
+      }catch(error){ finish(null); }
+    });
+  }
+  async function auditDeviceStorage(){
+    let api=null; try{ api=root?.Telegram?.WebApp?.DeviceStorage||null; }catch(error){ return {available:false,enumerable:false,keys:[],error:'access failed'}; }
+    if(!api||typeof api.getItem!=='function') return {available:false,enumerable:false,keys:[]};
+    const keys=diagnosticCandidates(), blocks=[];
+    await Promise.all(keys.map(async key=>{ const value=await readDeviceForAudit(api,key); if(value!==null) blocks.push(valueSummary(key,value)); }));
+    return {available:true,enumerable:false,keys:blocks};
+  }
+  async function auditIndexedDb(){
+    const indexedDb=root?.indexedDB;
+    if(!indexedDb) return {available:false,databases:[]};
+    if(typeof indexedDb.databases!=='function') return {available:true,enumerable:false,databases:[]};
+    try{
+      const databases=await indexedDb.databases();
+      const result=await Promise.all((databases||[]).map(database=>new Promise(resolve=>{
+        let settled=false; const finish=value=>{ if(settled) return; settled=true; resolve(value); };
+        const timer=setTimeout(()=>finish({name:database.name||'unknown',version:database.version||0,stores:[],readable:false}),1200);
+        try{
+          const request=indexedDb.open(database.name);
+          request.onsuccess=()=>{ clearTimeout(timer); const connection=request.result; const stores=[...connection.objectStoreNames]; connection.close(); finish({name:database.name||'unknown',version:database.version||0,stores,readable:true}); };
+          request.onerror=()=>{ clearTimeout(timer); finish({name:database.name||'unknown',version:database.version||0,stores:[],readable:false}); };
+          request.onupgradeneeded=()=>{ try{ request.transaction?.abort(); }catch(error){} };
+        }catch(error){ clearTimeout(timer); finish({name:database.name||'unknown',version:database.version||0,stores:[],readable:false}); }
+      })));
+      return {available:true,enumerable:true,databases:result};
+    }catch(error){ return {available:true,enumerable:false,databases:[],error:'enumeration failed'}; }
+  }
+  async function auditCacheStorage(){
+    const cacheStorage=root?.caches;
+    if(!cacheStorage||typeof cacheStorage.keys!=='function') return {available:false,caches:[]};
+    try{
+      const names=await cacheStorage.keys(), caches=[];
+      for(const name of names){
+        let urls=[], assets=[];
+        try{
+          const cache=await cacheStorage.open(name);
+          if(typeof cache.keys==='function'){
+            const requests=await cache.keys(); urls=requests.map(request=>request.url);
+            for(const request of requests){
+              const path=new URL(request.url).pathname, file=path.split('/').pop()||path;
+              if(!/^(index\.html|app\.js|styles\.css)$/.test(file)||typeof cache.match!=='function') continue;
+              try{
+                const response=await cache.match(request), text=await response.clone().text(), markers=[];
+                if(file==='index.html'&&text.includes('bottom-nav')) markers.push('bottom-nav');
+                if(file==='styles.css'&&text.includes('.bottom-nav')) markers.push('bottom-nav-css');
+                if(file==='app.js'){
+                  const build=text.match(/BUILD_VERSION=['\"]([^'\"]+)/); if(build) markers.push(`build:${build[1]}`);
+                  if(text.includes('renderCalendar')) markers.push('calendar-js');
+                }
+                assets.push({file,size:byteSize(text),markers});
+              }catch(error){ assets.push({file,size:null,markers:['unreadable']}); }
+            }
+          }
+        }catch(error){ urls=[]; assets=[]; }
+        caches.push({name,urls,assets});
+      }
+      return {available:true,caches};
+    }catch(error){ return {available:true,caches:[],error:'enumeration failed'}; }
+  }
+  async function getDiagnostics(){
+    const local=auditStorage(localStorageRef,diagnosticCandidates()), session=auditStorage((()=>{ try{return root?.sessionStorage||null;}catch(error){return null;} })(),diagnosticCandidates());
+    const device=await auditDeviceStorage(), indexedDb=await auditIndexedDb(), cacheStorage=await auditCacheStorage();
+    const namespaceSet=new Set(); [...local.keys,...session.keys,...device.keys].forEach(block=>{ const namespace=maskedNamespace(block.key); if(namespace) namespaceSet.add(namespace); });
+    return {blocked:storageBlocked(),backend,scope:i18n?.getStorageScope?.()||'unknown',userIdMasked:maskIdentifier(userId()),schemaVersion:Number(readItem(schemaKey))||0,localStorage:local,sessionStorage:session,indexedDB:indexedDb,deviceStorage:device,cacheStorage,namespaces:[...namespaceSet].sort(),legacyKeys:getLegacyKeys(),previousScopedKeys:getPreviousScopedKeys(),ownerMatchedLegacyKeys:ownerMatchedLegacyKeys.slice(),foreignLegacyKeys:foreignLegacyKeys.slice(),lastGoodKeys:[lastGoodKey].filter(Boolean)};
+  }
   return {
     STORAGE_SCHEMA_VERSION,
     storage,
@@ -278,6 +389,7 @@
     recoverUnassignedLegacy,
     getBaseKeys(){ return baseKeys.slice(); },
     getLastGoodKey(){ return lastGoodKey; },
-    getLegacyRecoveryKey(){ return legacyRecoveryKey; }
+    getLegacyRecoveryKey(){ return legacyRecoveryKey; },
+    getDiagnostics
   };
 });

@@ -50,7 +50,14 @@
   Object.assign(translations.en,{teacherSession:'Lesson with teacher'});
   const dateLabels={ru:{months:['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],monthsGen:['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'],weekdaysLong:['ВОСКРЕСЕНЬЕ','ПОНЕДЕЛЬНИК','ВТОРНИК','СРЕДА','ЧЕТВЕРГ','ПЯТНИЦА','СУББОТА'],weekdays:['вс','пн','вт','ср','чт','пт','сб']},en:{months:['January','February','March','April','May','June','July','August','September','October','November','December'],monthsGen:['January','February','March','April','May','June','July','August','September','October','November','December'],weekdaysLong:['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'],weekdays:['Su','Mo','Tu','We','Th','Fr','Sa']}};
   let cachedStorageScope=null, languagePersistence=null;
+  const telegramPlatforms=new Set(['android','ios','tdesktop','macos','weba','unigram']);
   function runtimeRoot(){ return typeof window!=='undefined'?window:typeof globalThis!=='undefined'?globalThis:null; }
+  function isTelegramContext(){
+    try {
+      const webApp=runtimeRoot()?.Telegram?.WebApp, platform=String(webApp?.platform||'').toLowerCase();
+      return Boolean(webApp&&(telegramPlatforms.has(platform)||webApp.initData));
+    } catch(error) { return false; }
+  }
   function getTelegramUserId(){
     try {
       const value=runtimeRoot()?.Telegram?.WebApp?.initDataUnsafe?.user?.id;
@@ -60,10 +67,10 @@
   function getStorageScope(){
     if(cachedStorageScope) return cachedStorageScope;
     const telegramId=getTelegramUserId();
-    cachedStorageScope=telegramId?`user:${telegramId}`:'browser-session';
+    cachedStorageScope=telegramId?`user:${telegramId}`:isTelegramContext()?'telegram-unidentified':'browser-session';
     return cachedStorageScope;
   }
-  function setBrowserStorageScope(scope){ if(!getTelegramUserId()&&/^browser-[a-z0-9_-]+$/i.test(String(scope||''))) cachedStorageScope=String(scope); return getStorageScope(); }
+  function setBrowserStorageScope(scope){ if(!getTelegramUserId()&&!isTelegramContext()&&/^browser-[a-z0-9_-]+$/i.test(String(scope||''))) cachedStorageScope=String(scope); return getStorageScope(); }
   function getStorageKey(key){ return `guitarDiary:${getStorageScope()}:${String(key)}`; }
   function getPreviousStorageKey(key){
     const scope=getStorageScope(), previousScope=scope.startsWith('user:')?`telegram-${scope.slice(5)}`:scope;
@@ -90,5 +97,5 @@
     document.querySelectorAll('option').forEach(option=>{ const key=sourceToKey.get(option.value)||sourceToKey.get(option.textContent.trim()); if(key){ option.value=t(key); option.textContent=t(key); } });
     document.querySelectorAll('[data-language-option]').forEach(button=>{ const active=button.dataset.languageOption===currentLanguage; button.classList.toggle('active',active); button.setAttribute('aria-pressed',String(active)); });
   }
-  return {LANGUAGE_KEY,BROWSER_SCOPE_KEY,translations,normalizeLanguage,detectLanguage,loadLanguage,t,formatDate,getDateLabels,getLanguage,setLanguage,configureLanguagePersistence,applyStaticTranslations,getTelegramUserId,getStorageScope,setBrowserStorageScope,getStorageKey,getPreviousStorageKey};
+  return {LANGUAGE_KEY,BROWSER_SCOPE_KEY,translations,normalizeLanguage,detectLanguage,loadLanguage,t,formatDate,getDateLabels,getLanguage,setLanguage,configureLanguagePersistence,applyStaticTranslations,getTelegramUserId,isTelegramContext,getStorageScope,setBrowserStorageScope,getStorageKey,getPreviousStorageKey};
 });

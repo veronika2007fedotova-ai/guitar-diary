@@ -272,6 +272,9 @@
       </form>
     </section>
   </div>
+  <script>
+    if('serviceWorker' in navigator && location.protocol!=='file:') window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}));
+  </script>
   <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   <script src="i18n.js"></script>
   <script src="backup-utils.js"></script>
