@@ -349,6 +349,7 @@ function getWeeklyMinutes(){
 function getWeeklyGoal(){ return normalizeWeeklyGoal(profile.weeklyGoal); }
 function renderWeeklyGoal(weekMinutes=getWeeklyMinutes()){
   const weeklyGoal=getWeeklyGoal(), percent=Math.min(100,weekMinutes/weeklyGoal*100);
+  el('goal-percent').textContent=`${Math.round(percent)}%`; el('goal-ring').style.setProperty('--goal-progress',`${percent}%`); el('goal-progress').setAttribute('aria-valuenow',String(Math.round(percent)));
   el('week-minutes').textContent=weekMinutes; el('week-progress').style.width=`${percent}%`;
   el('weekly-goal-display').textContent=weeklyGoal; el('progress-week-minutes').textContent=weekMinutes; el('progress-week-goal').textContent=weeklyGoal; el('progress-week-bar').style.width=`${percent}%`;
 }
@@ -388,7 +389,7 @@ function renderCalendar(){
     grid.appendChild(button);
   }
 }
-function selectDate(date){ if(toKey(date)<profile.startDate){ showToast(t('dayBeforeStart')); return; } selectedDate = new Date(date); if(date.getMonth()!==calendarDate.getMonth()) calendarDate = new Date(date.getFullYear(),date.getMonth(),1); renderCalendar(); renderForm(); if(window.matchMedia('(max-width:700px)').matches) openMobileEntry(); }
+function selectDate(date){ if(toKey(date)<profile.startDate){ showToast(t('dayBeforeStart')); return; } selectedDate = new Date(date); if(date.getMonth()!==calendarDate.getMonth()) calendarDate = new Date(date.getFullYear(),date.getMonth(),1); renderCalendar(); renderForm(); openMobileEntry(); }
 function renderForm(){
   const key=toKey(selectedDate), entry=entries[key]||{};
   const dateLabel=key===todayKey?t('dateToday',{date:formatDate(selectedDate)}):t('dateWeekday',{weekday:WEEKDAYS[selectedDate.getDay()],date:formatDate(selectedDate)});
@@ -420,14 +421,45 @@ function calcStats(){
   renderProgress();
 }
 function showToast(message){ const toast=el('toast'); toast.textContent=message; toast.classList.add('show'); clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.classList.remove('show'),2200); }
-function switchView(view){ if(view!=='journal') closeMobileEntry(); document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden')); el(`${view}-view`).classList.remove('hidden'); document.querySelectorAll('.nav-item,.bottom-nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view)); if(view==='stats') renderProgress(); if(view==='test'){ renderTerms(); renderWordStats(); } if(view==='chords') renderSongs(); window.scrollTo(0,0); }
+function switchView(view){ if(view!=='journal'){ closeMobileEntry(); closeHomePanel(); } document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden')); el(`${view}-view`).classList.remove('hidden'); document.querySelectorAll('.nav-item,.bottom-nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view)); if(view==='stats') renderProgress(); if(view==='test'){ renderTerms(); renderWordStats(); } if(view==='chords') renderSongs(); window.scrollTo(0,0); }
 function setModalPageLock(locked){ document.documentElement.classList.toggle('modal-locked',locked); document.body.classList.toggle('modal-locked',locked); }
 function setMobileEntry(open){
   const entry=el('entry-panel'), backdrop=el('mobile-entry-backdrop'); if(!entry||!backdrop) return;
   entry.classList.toggle('mobile-entry-open',open); backdrop.classList.toggle('hidden',!open); backdrop.classList.toggle('open',open); document.documentElement.classList.toggle('mobile-entry-locked',open); document.body.classList.toggle('mobile-entry-locked',open);
 }
-function openMobileEntry(){ setMobileEntry(true); }
-function closeMobileEntry(){ setMobileEntry(false); }
+let activeHomePanel=null;
+let homePanelOrigin=null;
+let homeReturnFocus=null;
+const homeDialog=el('home-dialog');
+function closeHomePanel(){
+  if(activeHomePanel){
+    const panel=el(activeHomePanel); panel.classList.add('hidden');
+    homePanelOrigin.parentNode.insertBefore(panel,homePanelOrigin); homePanelOrigin.remove();
+    document.querySelector(`[data-home-panel="${activeHomePanel}"]`)?.setAttribute('aria-expanded','false');
+    activeHomePanel=null; homePanelOrigin=null;
+  }
+  if(homeDialog.open) homeDialog.close();
+  document.documentElement.classList.remove('home-dialog-locked');
+  homeReturnFocus?.focus({preventScroll:true}); homeReturnFocus=null;
+}
+function setHomePanel(id,open){
+  if(!open){ if(activeHomePanel===id) closeHomePanel(); return; }
+  const returnFocus=homeReturnFocus||document.activeElement;
+  closeHomePanel(); homeReturnFocus=returnFocus;
+  const panel=el(id),button=document.querySelector(`[data-home-panel="${id}"]`);
+  homePanelOrigin=document.createComment('home panel position'); panel.before(homePanelOrigin);
+  el('home-dialog-content').appendChild(panel); panel.classList.remove('hidden'); activeHomePanel=id;
+  el('home-dialog-title').textContent=button.querySelector('b').textContent;
+  button.setAttribute('aria-expanded','true'); homeDialog.showModal();
+  document.documentElement.classList.add('home-dialog-locked');
+  homeDialog.querySelector('.home-dialog-close').focus();
+}
+document.querySelectorAll('[data-home-panel]').forEach(button=>button.addEventListener('click',()=>setHomePanel(button.dataset.homePanel,true)));
+homeDialog.querySelector('.home-dialog-close').addEventListener('click',closeHomePanel);
+homeDialog.addEventListener('cancel',event=>{event.preventDefault();closeHomePanel();});
+homeDialog.addEventListener('click',event=>{if(event.target===homeDialog){const box=homeDialog.getBoundingClientRect();if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)closeHomePanel();}});
+function openMobileEntry(){ setHomePanel('entry-panel',true); }
+function closeMobileEntry(){ setMobileEntry(false); if(activeHomePanel==='entry-panel') closeHomePanel(); }
 function renderProfile(){
   el('profile-name').value=profile.name;
   el('profile-start-date').value=profile.startDate;
@@ -501,6 +533,7 @@ function removeFavorite(favoriteId){
 }
 let editingInsightKey=null;
 function openInsightModal(dateKey=todayKey){
+  closeHomePanel();
   const modal=el('insight-modal'); if(!modal) return;
   const requestedKey=/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey))?String(dateKey):todayKey;
   editingInsightKey=dailyInsights[requestedKey] ? requestedKey : null;
@@ -754,7 +787,7 @@ el('weekly-goal-modal').addEventListener('click',event=>{ if(event.target.id==='
 el('weekly-goal-form').addEventListener('submit',event=>{ event.preventDefault(); if(!updateWeeklyGoal(el('weekly-goal-editor').value)){ showToast(t('weeklyGoalInvalid')); el('weekly-goal-editor').focus(); return; } closeWeeklyGoalModal(); showToast(t('weeklyGoalUpdated')); });
 el('prev-month').addEventListener('click',()=>{ calendarDate.setMonth(calendarDate.getMonth()-1); renderCalendar(); });
 el('next-month').addEventListener('click',()=>{ calendarDate.setMonth(calendarDate.getMonth()+1); renderCalendar(); });
-el('today-button').addEventListener('click',()=>{ selectedDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()); calendarDate=new Date(now.getFullYear(),now.getMonth(),1); renderCalendar(); renderForm(); if(window.matchMedia('(max-width:700px)').matches) openMobileEntry(); });
+el('today-button').addEventListener('click',()=>{ selectedDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()); calendarDate=new Date(now.getFullYear(),now.getMonth(),1); renderCalendar(); renderForm(); openMobileEntry(); });
 el('show-all').addEventListener('click',()=>{ document.querySelector('.recent-section').scrollIntoView({behavior:'smooth'}); });
 document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{ if(btn.dataset.view==='profile') renderProfile(); switchView(btn.dataset.view); }));
 document.querySelectorAll('[data-go-journal]').forEach(btn=>btn.addEventListener('click',()=>switchView('journal')));
@@ -809,7 +842,7 @@ el('quiz-retry').addEventListener('click',()=>startQuiz(quizState.selection,quiz
 el('mobile-entry-open').addEventListener('click',openMobileEntry);
 el('mobile-entry-close').addEventListener('click',closeMobileEntry);
 el('mobile-entry-backdrop').addEventListener('click',closeMobileEntry);
-document.addEventListener('keydown',event=>{ if(event.key==='Escape'){ closeMobileEntry(); closeWeeklyGoalModal(); closeInsightModal(); closeFavoriteModal(); closeFavoriteDetail(); } });
+document.addEventListener('keydown',event=>{ if(event.key==='Escape'){ closeHomePanel(); closeMobileEntry(); closeWeeklyGoalModal(); closeInsightModal(); closeFavoriteModal(); closeFavoriteDetail(); } });
 el('insight-edit').addEventListener('click',()=>openInsightModal(todayKey));
 el('insight-delete').addEventListener('click',()=>removeInsight(todayKey));
 el('new-insight').addEventListener('click',()=>openInsightModal(toKey(selectedDate)));

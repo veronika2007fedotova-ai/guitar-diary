@@ -86,6 +86,8 @@
   function getLanguage(){ return currentLanguage; }
   function configureLanguagePersistence(callback){ languagePersistence=typeof callback==='function'?callback:null; }
   function setLanguage(value,persist=true){ const next=normalizeLanguage(value); if(!next) return currentLanguage; const changed=currentLanguage!==next; currentLanguage=next; if(persist){ try{ languagePersistence?.(currentLanguage); }catch(error){} } if(changed&&typeof window!=='undefined'){ const event=typeof CustomEvent==='function'?new CustomEvent('guitar-diary-language-change',{detail:{language:currentLanguage}}):new Event('guitar-diary-language-change'); window.dispatchEvent(event); } return currentLanguage; }
+  Object.assign(translations.ru,{homeWeeklyGoal:'Недельная цель',homeGoalCaption:'Выполнено / цель · за последние 7 дней',homeStreak:'Серия дней подряд',homeVisits:'Дни посещения дневника',homeCalendar:'Календарь',homeFill:'Заполнить дневник',homeInsight:'Инсайт дня',homeRecent:'Последние записи'});
+  Object.assign(translations.en,{homeWeeklyGoal:'Weekly goal',homeGoalCaption:'Completed / goal · last 7 days',homeStreak:'Consecutive days',homeVisits:'Days visiting the diary',homeCalendar:'Calendar',homeFill:'Fill in diary',homeInsight:'Daily insight',homeRecent:'Recent entries'});
   const skipSelector='#greeting-name,#top-telegram-link,#profile-telegram-link,#insight-day,#mobile-entry-preview-text,#recent-list,#favorites-list,#insight-list,#songs-list,#terms-list,#streak-days,#quiz-word,#quiz-feedback,#quiz-missed-list,#song-detail-title,#song-detail-artist,#song-detail-chords,#song-detail-lyrics,#favorite-detail-title,#favorite-detail-content,#toast';
   function applyStaticTranslations(){
     if(typeof document==='undefined') return;

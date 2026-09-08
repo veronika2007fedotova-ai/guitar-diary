@@ -23,22 +23,26 @@
       </header>
 
       <section class="view" id="journal-view">
-        <div class="streak-banner">
-          <div class="streak-flame">✦</div>
-          <div class="streak-copy"><span>ТЕКУЩАЯ СЕРИЯ</span><strong><b id="streak-count">0</b> <span id="streak-label">дней подряд</span></strong><small>Серия считает только дни, когда ты заходил в дневник.</small></div>
-          <div class="streak-days" id="streak-days"></div>
+        <section class="weekly-goal-card panel" aria-labelledby="home-goal-title">
+          <div class="weekly-goal-content"><span class="eyebrow">ТВОЙ РИТМ</span><h2 id="home-goal-title">Недельная цель</h2><div class="goal-minutes"><strong id="week-minutes">0</strong><span>/ <b id="weekly-goal-display">180</b> мин</span></div><p class="goal-caption">Выполнено / цель · за последние 7 дней</p><div class="goal-track" id="goal-progress" role="progressbar" aria-label="Недельная цель" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="week-progress"></span></div><button class="text-button weekly-goal-edit" id="weekly-goal-edit" type="button">Изменить цель</button></div>
+          <div class="goal-ring" id="goal-ring"><strong id="goal-percent">0%</strong></div>
+        </section>
+        <div class="home-stat-grid">
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Занятий в этом месяце</span><span class="stat-art steps-art" aria-hidden="true"><svg viewBox="0 0 80 80"><defs><linearGradient id="steps-color" x2="0" y2="1"><stop stop-color="#b5ffdc"/><stop offset="1" stop-color="#47ac80"/></linearGradient></defs><g fill="url(#steps-color)"><rect x="7" y="51" width="11" height="22" rx="5.5"/><rect x="25" y="37" width="11" height="36" rx="5.5"/><rect x="43" y="23" width="11" height="50" rx="5.5"/><rect x="61" y="7" width="11" height="66" rx="5.5"/></g></svg></span></div><strong id="month-sessions">0</strong></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Серия дней подряд</span><span class="stat-art flame-art" aria-hidden="true"><svg viewBox="0 0 80 80"><defs><linearGradient id="flame-color" x2="0.4" y2="1"><stop stop-color="#ffd58c"/><stop offset=".55" stop-color="#ff9052"/><stop offset="1" stop-color="#ed503c"/></linearGradient></defs><path fill="url(#flame-color)" d="M44 4c4 20 23 24 23 44 0 17-12 28-27 28S13 65 13 49c0-13 8-23 16-30-1 12 2 17 6 19C45 28 42 15 44 4Z"/><path fill="#ffe4a5" d="M42 39c1 11 12 15 12 23 0 8-6 13-14 13s-14-5-14-13c0-7 5-13 10-17-1 7 1 10 3 11 4-5 4-11 3-17Z"/></svg></span></div><strong><b id="streak-count">0</b> <em id="streak-label">дней подряд</em></strong><span class="stat-note">Дни посещения дневника</span><div id="streak-days" hidden></div></article>
         </div>
-
-        <div class="section-heading"><div><span class="eyebrow">ТВОЙ РИТМ</span><h2>Всё под контролем</h2></div><div class="section-actions"><a class="teacher-inline-link" href="https://t.me/PD_Glazunov" target="_blank" rel="noopener noreferrer">💬 Преподавателю</a><button class="outline-button" id="today-button">Сегодня <span>→</span></button></div></div>
-        <div class="stat-grid">
-          <article class="stat-card"><div class="stat-top"><span class="stat-label">Занятий в этом месяце</span><span class="stat-symbol orange">◷</span></div><strong id="month-sessions">12</strong><span class="stat-note positive">↑ <b id="month-change">20%</b> к прошлому месяцу</span></article>
-          <article class="stat-card"><div class="stat-top"><span class="stat-label">Время за неделю</span><span class="stat-symbol green">◒</span></div><strong><span id="week-minutes">145</span> <em>мин</em></strong><div class="weekly-goal-line"><span class="stat-note">Цель: <strong id="weekly-goal-display">180</strong> мин</span><button class="text-button weekly-goal-edit" id="weekly-goal-edit" type="button">Изменить цель</button></div><div class="progress-bar"><span id="week-progress"></span></div></article>
-          <article class="stat-card quote-card"><div class="quote-mark">“</div><span class="insight-label">ИНСАЙТ ДНЯ</span><span class="insight-meta" id="insight-meta">Сегодня</span><p id="insight-day">На сегодня инсайта нет.</p><div class="insight-card-actions"><button class="insight-link" id="insight-edit" type="button">Добавить инсайт <span>＋</span></button><button class="insight-delete-link" id="insight-delete" type="button" hidden>Удалить</button><button class="insight-link" type="button" data-view="library">Все инсайты <span>→</span></button></div></article>
+        <div class="section-heading"><div><span class="eyebrow">МОЙ ДНЕВНИК</span><h2>Всё под контролем</h2></div><div class="section-actions"><a class="teacher-inline-link" href="https://t.me/PD_Glazunov" target="_blank" rel="noopener noreferrer">💬 Преподавателю</a><button class="outline-button" id="today-button">Сегодня <span>→</span></button></div></div>
+        <div class="home-actions">
+          <button type="button" data-home-panel="home-calendar" aria-controls="home-calendar" aria-expanded="false"><span aria-hidden="true">▦</span><b>Календарь</b></button>
+          <button type="button" data-home-panel="entry-panel" aria-controls="entry-panel" aria-expanded="false"><span aria-hidden="true">✎</span><b>Заполнить дневник</b></button>
+          <button type="button" data-home-panel="home-insight" aria-controls="home-insight" aria-expanded="false"><span aria-hidden="true">☀</span><b>Инсайт дня</b></button>
+          <button type="button" data-home-panel="home-recent" aria-controls="home-recent" aria-expanded="false"><span aria-hidden="true">☷</span><b>Последние записи</b></button>
         </div>
+        <article class="stat-card quote-card hidden" id="home-insight"><div class="quote-mark">“</div><span class="insight-label">ИНСАЙТ ДНЯ</span><span class="insight-meta" id="insight-meta">Сегодня</span><p id="insight-day">На сегодня инсайта нет.</p><div class="insight-card-actions"><button class="insight-link" id="insight-edit" type="button">Добавить инсайт <span>＋</span></button><button class="insight-delete-link" id="insight-delete" type="button" hidden>Удалить</button><button class="insight-link" type="button" data-view="library">Все инсайты <span>→</span></button></div></article>
 
         <div class="workspace-grid">
-          <section class="calendar-card panel">
-            <div class="calendar-header"><button class="round-button" id="prev-month" aria-label="Предыдущий месяц">‹</button><div><h3 id="calendar-month">Сентябрь 2026</h3><span id="calendar-caption">Нажми на день, чтобы открыть запись</span></div><button class="round-button" id="next-month" aria-label="Следующий месяц">›</button></div>
+          <section class="calendar-card panel hidden" id="home-calendar">
+            <div class="calendar-header"><button class="round-button" id="prev-month" aria-label="Предыдущий месяц"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><div><h3 id="calendar-month">Сентябрь 2026</h3><span id="calendar-caption">Нажми на день, чтобы открыть запись</span></div><button class="round-button" id="next-month" aria-label="Следующий месяц"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div>
             <div class="calendar-weekdays"><span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span></div>
             <div class="calendar-grid" id="calendar-grid"></div>
              <div class="calendar-legend"><span><i class="legend-dot completed"></i> Есть запись</span><span><i class="legend-dot teacher-session"></i> Занятие с педагогом</span><span><i class="legend-dot today"></i> Сегодня</span><span><i class="legend-dot selected"></i> Выбранный день</span><span><i class="legend-dot disabled"></i> До старта</span></div>
@@ -49,7 +53,7 @@
             <span class="mobile-entry-preview-arrow">Открыть <span>↗</span></span>
           </button>
 
-          <section class="entry-card panel" id="entry-panel">
+          <section class="entry-card panel hidden" id="entry-panel">
             <div class="entry-head"><div><span class="eyebrow">ДНЕВНИК</span><h3 id="entry-date">Сегодня, 4 сентября</h3></div><div class="entry-head-actions"><span class="entry-status" id="entry-status">НОВАЯ ЗАПИСЬ</span><button class="text-button mobile-entry-close" id="mobile-entry-close" type="button">Закрыть</button></div></div>
             <form id="entry-form">
               <label class="field-label" for="training">Тренировка сегодня <span>Что делал на занятии</span></label>
@@ -66,7 +70,7 @@
           </section>
         </div>
 
-        <section class="recent-section"><div class="section-heading compact"><div><span class="eyebrow">ПОСЛЕДНИЕ ЗАПИСИ</span><h2>Твои занятия</h2></div><button class="text-button" id="show-all">Показать все <span>→</span></button></div><div class="recent-list" id="recent-list"></div><div class="backup-tools"><span>Данные хранятся на этом устройстве</span><div><button class="backup-button" id="export-data">↓ Скачать копию</button><button class="backup-button" id="import-data">↑ Восстановить</button><input type="file" id="import-file" accept=".json,application/json" hidden /></div></div></section>
+        <section class="recent-section hidden" id="home-recent"><div class="section-heading compact"><div><span class="eyebrow">ПОСЛЕДНИЕ ЗАПИСИ</span><h2>Твои занятия</h2></div><button class="text-button" id="show-all">Показать все <span>→</span></button></div><div class="recent-list" id="recent-list"></div><div class="backup-tools"><span>Данные хранятся на этом устройстве</span><div><button class="backup-button" id="export-data">↓ Скачать копию</button><button class="backup-button" id="import-data">↑ Восстановить</button><input type="file" id="import-file" accept=".json,application/json" hidden /></div></div></section>
       </section>
 
       <section class="view hidden" id="stats-view">
@@ -226,6 +230,7 @@
       <button class="bottom-nav-item" data-view="chords" type="button"><span class="nav-icon">🎸</span><span>Аккорды</span></button>
     </nav>
   </div>
+  <dialog id="home-dialog" class="home-dialog" aria-labelledby="home-dialog-title"><div class="home-dialog-heading"><h2 id="home-dialog-title"></h2><button type="button" class="home-dialog-close" aria-label="Закрыть">×</button></div><div id="home-dialog-content"></div></dialog>
   <div class="mobile-entry-backdrop hidden" id="mobile-entry-backdrop"></div>
   <aside class="debug-panel hidden" id="debug-panel" aria-live="polite"></aside>
   <div class="toast" id="toast" role="status"></div>
