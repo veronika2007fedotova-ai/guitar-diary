@@ -44,21 +44,6 @@
   const signatureSheet = get('metronome-signature-sheet');
   const dialog = get('home-dialog');
   const fallbackBackdrop = get('home-dialog-fallback-backdrop');
-  const testSoundButton = get('metronome-test-sound');
-  const debugOutput = get('metronome-debug-output');
-  const debugLines = [];
-
-  function debugAudio(message) {
-    const line = `${new Date().toISOString().slice(11, 23)} ${message}`;
-    debugLines.push(line);
-    while (debugLines.length > 18) debugLines.shift();
-    if (debugOutput) debugOutput.textContent = debugLines.join('\n');
-    console.log('[Metronome]', message);
-  }
-
-  function formatAudioTime(value) {
-    return Number.isFinite(value) ? value.toFixed(3) : 'n/a';
-  }
 
   function clamp(value, minimum, maximum) {
     return Math.min(maximum, Math.max(minimum, value));
@@ -158,12 +143,9 @@
     if (!audioContext) return;
     const now = audioContext.currentTime;
     const scheduledTime = Math.max(time, now + 0.005);
-    debugAudio(`scheduleBeat() beat=${beat + 1} scheduled=${formatAudioTime(scheduledTime)} current=${formatAudioTime(now)} delta=${formatAudioTime(scheduledTime - now)}`);
-    if (scheduledTime !== time) debugAudio(`beat time was in the past; shifted from ${formatAudioTime(time)} to ${formatAudioTime(scheduledTime)}`);
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
     const accent = beat === 0;
-    debugAudio('oscillator/source created');
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(accent ? 1320 : 880, scheduledTime);
     gain.gain.setValueAtTime(0.0001, scheduledTime);
@@ -171,7 +153,6 @@
     gain.gain.exponentialRampToValueAtTime(0.0001, scheduledTime + 0.075);
     oscillator.connect(gain);
     gain.connect(audioContext.destination);
-    debugAudio('oscillator/source connected to gain and destination');
     oscillator.onended = () => {
       scheduledOscillators.delete(oscillator);
       try { gain.disconnect(); } catch (_) { /* already disconnected */ }
@@ -179,7 +160,6 @@
     scheduledOscillators.add(oscillator);
     oscillator.start(scheduledTime);
     oscillator.stop(scheduledTime + 0.09);
-    debugAudio(`oscillator started; stop=${formatAudioTime(scheduledTime + 0.09)}`);
     scheduleIndicator(beat, scheduledTime);
   }
 
@@ -192,7 +172,6 @@
     if (!running || !audioContext) return;
     const now = audioContext.currentTime;
     if (nextNoteTime < now) {
-      debugAudio(`scheduler caught up: next=${formatAudioTime(nextNoteTime)} current=${formatAudioTime(now)}`);
       nextNoteTime = now + 0.01;
     }
     while (nextNoteTime < audioContext.currentTime + SCHEDULE_AHEAD_SECONDS) {
@@ -208,9 +187,6 @@
     if (audioContext?.state === 'closed') audioContext = null;
     if (!audioContext) {
       audioContext = new AudioContextConstructor();
-      debugAudio('AudioContext created');
-    } else {
-      debugAudio('AudioContext reused');
     }
     return audioContext;
   }
@@ -221,17 +197,16 @@
     try {
       const context = createAudioContext();
       if (!context) return;
-      console.log('AudioContext state:', audioContext.state);
-      debugAudio(`start: state before resume=${audioContext.state} currentTime=${formatAudioTime(audioContext.currentTime)}`);
       try {
-        if (context.state !== 'running') await context.resume();
-      } finally {
-        console.log('AudioContext state:', audioContext.state);
-        debugAudio(`start: state after resume=${audioContext.state} currentTime=${formatAudioTime(audioContext.currentTime)}`);
+        if (context.state !== 'running') {
+          await context.resume();
+        }
+      } catch (error) {
+        console.warn('Metronome audio resume failed.', error);
+        return;
       }
       if (context.state !== 'running') {
         console.warn('Metronome audio is not running.', context.state);
-        debugAudio(`start aborted: state=${context.state}`);
         return;
       }
       running = true;
@@ -241,7 +216,6 @@
       nextNoteTime = context.currentTime + 0.05;
       scheduler();
       updateToggle();
-      debugAudio(`scheduler started at currentTime=${formatAudioTime(context.currentTime)}`);
     } catch (error) {
       console.warn('Metronome audio is unavailable.', error);
     } finally {
@@ -257,7 +231,6 @@
     stopScheduledOscillators();
     updateBeatIndicators(-1);
     updateToggle();
-    debugAudio(audioContext ? `stop: scheduler cleared; state=${audioContext.state} currentTime=${formatAudioTime(audioContext.currentTime)}` : 'stop: scheduler cleared; no AudioContext');
   }
 
   function destroyMetronome() {
@@ -266,57 +239,7 @@
       const context = audioContext;
       audioContext = null;
       context.close().catch(() => {});
-      debugAudio('destroy: AudioContext closed');
     }
-  }
-
-  async function testIOSBeep() {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) {
-      debugAudio('TEST SOUND: AudioContext is unavailable');
-      return;
-    }
-    if (!audioContext || audioContext.state === 'closed') audioContext = new AudioContextClass();
-    console.log('AudioContext state:', audioContext.state);
-    debugAudio(`TEST SOUND: before resume state=${audioContext.state} currentTime=${formatAudioTime(audioContext.currentTime)}`);
-    try {
-      if (audioContext.state !== 'running') await audioContext.resume();
-    } catch (error) {
-      debugAudio(`TEST SOUND: resume failed: ${error?.message || error}`);
-      return;
-    } finally {
-      console.log('AudioContext state:', audioContext.state);
-      debugAudio(`TEST SOUND: after resume state=${audioContext.state} currentTime=${formatAudioTime(audioContext.currentTime)}`);
-    }
-    if (audioContext.state !== 'running') {
-      debugAudio(`TEST SOUND: aborted because state=${audioContext.state}`);
-      return;
-    }
-    const time = audioContext.currentTime;
-    const duration = 0.12;
-    const osc = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    debugAudio('TEST SOUND: oscillator/source created');
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.2, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-    osc.connect(gain);
-    gain.connect(audioContext.destination);
-    debugAudio(`TEST SOUND: connected to destination at ${formatAudioTime(time)}`);
-    osc.onended = () => {
-      scheduledOscillators.delete(osc);
-      try { gain.disconnect(); } catch (_) { /* already disconnected */ }
-      debugAudio('TEST SOUND: oscillator ended');
-    };
-    scheduledOscillators.add(osc);
-    osc.start(time);
-    osc.stop(time + duration);
-    debugAudio(`TEST SOUND: started=${formatAudioTime(time)} stopped=${formatAudioTime(time + duration)}`);
-  }
-
-  function onTestSoundClick() {
-    void testIOSBeep().catch(error => debugAudio(`TEST SOUND: playback failed: ${error?.message || error}`));
   }
 
   function updateToggle() {
@@ -429,7 +352,6 @@
     get('metronome-increase').addEventListener('click', incrementBpm);
     get('metronome-toggle').addEventListener('click', toggleMetronome);
     get('metronome-signature-button').addEventListener('click', toggleSignatureSheet);
-    testSoundButton?.addEventListener('click', onTestSoundClick);
     signatureSheet.addEventListener('click', onSignatureOptionClick);
     get('metronome-back').addEventListener('click', closeMetronomeScreen);
     if ('PointerEvent' in window) {
@@ -456,7 +378,6 @@
     get('metronome-increase').removeEventListener('click', incrementBpm);
     get('metronome-toggle').removeEventListener('click', toggleMetronome);
     get('metronome-signature-button').removeEventListener('click', toggleSignatureSheet);
-    testSoundButton?.removeEventListener('click', onTestSoundClick);
     signatureSheet.removeEventListener('click', onSignatureOptionClick);
     get('metronome-back').removeEventListener('click', closeMetronomeScreen);
     if ('PointerEvent' in window) {
@@ -516,5 +437,5 @@
 
   renderBpm();
   renderBeatIndicators();
-  window.GuitarMetronome = { startMetronome, stopMetronome, setBpm, incrementBpm, decrementBpm, setTimeSignature, scheduleBeat, updateBeatIndicators, destroyMetronome, testIOSBeep };
+  window.GuitarMetronome = { startMetronome, stopMetronome, setBpm, incrementBpm, decrementBpm, setTimeSignature, scheduleBeat, updateBeatIndicators, destroyMetronome };
 })();
