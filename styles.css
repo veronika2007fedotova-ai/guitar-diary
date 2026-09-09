@@ -149,3 +149,18 @@ html,body{min-height:var(--app-viewport-height)}
 .tuner-headstock{height:auto}
 @media(max-width:700px){.tuner-headstock{height:auto;min-height:276px}.tuner-headstock-art{width:min(184px,100%)}.tuner-headstock-image{border-radius:14px}.tuner-headstock .tuner-string-overlay{width:100%;height:100%}}
 @media(max-width:370px){.tuner-headstock{min-height:255px}.tuner-headstock-art{width:170px}}
+
+/* Mobile-safe tuner sizing. Keep the existing visual theme while removing
+   desktop-sized tracks and native WebKit button rendering. */
+.tuner-screen{width:100%;max-width:100%;overflow-x:hidden}
+.tuner-mode-content,.tuner-string-column{width:100%;min-width:0}
+.tuner-string-layout{grid-template-columns:minmax(64px,1fr) auto minmax(64px,1fr);gap:clamp(7px,2.8vw,24px);width:min(560px,100%);max-width:100%}
+.tuner-headstock{position:relative;width:100%;max-width:100%;height:auto;min-height:0;margin:0 auto;transform:none}
+.tuner-headstock-art{position:relative;width:min(44vw,280px);max-width:100%;margin:0 auto;aspect-ratio:2 / 3}
+.tuner-headstock-image{width:100%;height:auto;display:block;object-fit:contain}
+.tuner-headstock .tuner-string-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.tuner-mode-tab,.tuner-microphone-button,.tuner-auto-button,.tuner-back,.tuner-string-column button{appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+@media(max-width:700px){
+  .tuner-headstock{height:auto;min-height:0;transform:none}
+  .tuner-headstock-art{width:min(44vw,280px);max-width:100%}
+}

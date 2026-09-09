@@ -43,7 +43,10 @@
 
   function text(key, fallback) {
     try {
-      return i18n?.t?.(key) || fallback;
+      const translated = i18n?.t?.(key);
+      // i18n.t() returns the key itself when a dictionary entry is missing.
+      // Never expose that implementation fallback in the tuner UI.
+      return translated && translated !== key ? translated : fallback;
     } catch (error) {
       return fallback;
     }
@@ -414,6 +417,10 @@
     dialog?.classList.add('tuner-mode');
     selectedString = null;
     setMode('guitar');
+    // The tuner lives in a dynamically opened panel. Re-apply the existing
+    // translations here so a cached/late-rendered DOM never exposes keys.
+    i18n?.applyStaticTranslations?.();
+    renderLanguage();
     updateMicrophoneUi();
     get('tuner-back')?.focus({ preventScroll: true });
   }
