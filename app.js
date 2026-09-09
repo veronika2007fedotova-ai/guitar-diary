@@ -24,7 +24,7 @@ function formatCacheDiagnostics(audit){
 function clearBlockingUi(){
   document.documentElement.classList.remove('modal-locked','mobile-entry-locked');
   document.body?.classList.remove('modal-locked','mobile-entry-locked');
-  ['#insight-modal','#favorite-modal','#favorite-detail-modal','#weekly-goal-modal','#mobile-entry-backdrop'].forEach(selector=>{
+  ['#insight-modal','#favorite-modal','#favorite-detail-modal','#weekly-goal-modal','#mobile-entry-backdrop','#home-dialog-fallback-backdrop'].forEach(selector=>{
     const element=document.querySelector(selector); if(!element) return;
     element.classList.add('hidden'); element.classList.remove('open');
   });
@@ -118,6 +118,15 @@ function safeTelegramCall(method){
 }
 safeTelegramCall('ready');
 safeTelegramCall('expand');
+function syncAppViewportHeight(){
+  const telegramHeight=Number(telegramWebApp?.viewportHeight), visualHeight=Number(window.visualViewport?.height), innerHeight=Number(window.innerHeight);
+  const height=telegramHeight>0?telegramHeight:visualHeight>0?visualHeight:innerHeight;
+  if(Number.isFinite(height)&&height>0) document.documentElement.style.setProperty('--app-viewport-height',`${Math.round(height)}px`);
+}
+syncAppViewportHeight();
+window.addEventListener('resize',syncAppViewportHeight,{passive:true});
+window.visualViewport?.addEventListener('resize',syncAppViewportHeight,{passive:true});
+try { telegramWebApp?.onEvent?.('viewportChanged',syncAppViewportHeight); } catch(error) { recordInitializationError(error); }
 let now = new Date();
 let todayKey = toKey(now);
 let selectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -431,6 +440,24 @@ let activeHomePanel=null;
 let homePanelOrigin=null;
 let homeReturnFocus=null;
 const homeDialog=el('home-dialog');
+const homeDialogFallbackBackdrop=el('home-dialog-fallback-backdrop');
+function showHomeDialog(){
+  if(typeof homeDialog?.showModal==='function'){
+    try { homeDialog.showModal(); return; } catch(error) { recordInitializationError(error); }
+  }
+  homeDialog.classList.add('home-dialog-fallback');
+  homeDialog.setAttribute('open','');
+  homeDialogFallbackBackdrop?.classList.remove('hidden');
+}
+function hideHomeDialog(){
+  if(homeDialog?.open||homeDialog?.hasAttribute('open')){
+    if(typeof homeDialog.close==='function'){
+      try { homeDialog.close(); } catch(error) { homeDialog.removeAttribute('open'); }
+    } else homeDialog.removeAttribute('open');
+  }
+  homeDialog.classList.remove('home-dialog-fallback');
+  homeDialogFallbackBackdrop?.classList.add('hidden');
+}
 function closeHomePanel(){
   if(activeHomePanel){
     const panel=el(activeHomePanel); panel.classList.add('hidden');
@@ -438,7 +465,7 @@ function closeHomePanel(){
     document.querySelector(`[data-home-panel="${activeHomePanel}"]`)?.setAttribute('aria-expanded','false');
     activeHomePanel=null; homePanelOrigin=null;
   }
-  if(homeDialog.open) homeDialog.close();
+  hideHomeDialog();
   document.documentElement.classList.remove('home-dialog-locked');
   homeReturnFocus?.focus({preventScroll:true}); homeReturnFocus=null;
 }
@@ -450,12 +477,13 @@ function setHomePanel(id,open){
   homePanelOrigin=document.createComment('home panel position'); panel.before(homePanelOrigin);
   el('home-dialog-content').appendChild(panel); panel.classList.remove('hidden'); activeHomePanel=id;
   el('home-dialog-title').textContent=button.querySelector('b').textContent;
-  button.setAttribute('aria-expanded','true'); homeDialog.showModal();
+  button.setAttribute('aria-expanded','true'); showHomeDialog();
   document.documentElement.classList.add('home-dialog-locked');
   homeDialog.querySelector('.home-dialog-close').focus();
 }
 document.querySelectorAll('[data-home-panel]').forEach(button=>button.addEventListener('click',()=>setHomePanel(button.dataset.homePanel,true)));
 homeDialog.querySelector('.home-dialog-close').addEventListener('click',closeHomePanel);
+homeDialogFallbackBackdrop?.addEventListener('click',closeHomePanel);
 homeDialog.addEventListener('cancel',event=>{event.preventDefault();closeHomePanel();});
 homeDialog.addEventListener('click',event=>{if(event.target===homeDialog){const box=homeDialog.getBoundingClientRect();if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)closeHomePanel();}});
 function openMobileEntry(){ setHomePanel('entry-panel',true); }

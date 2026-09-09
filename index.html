@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0c0d10" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
@@ -41,9 +41,19 @@
 
         <section id="home-tools" class="hidden">
           <div class="music-tool-choices">
-            <button class="music-tool-choice" type="button" disabled><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m17 7-9 34h32L31 7Z"/><path d="m24 31 12-18M18 35h12"/><circle cx="24" cy="31" r="2"/></svg><strong>Метроном</strong><span>Скоро</span></button>
+            <button class="music-tool-choice" type="button" data-music-tool="metronome"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m17 7-9 34h32L31 7Z"/><path d="m24 31 12-18M18 35h12"/><circle cx="24" cy="31" r="2"/></svg><strong>Метроном</strong><span>Открыть</span></button>
             <button class="music-tool-choice" type="button" disabled><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 7v15a8 8 0 0 0 16 0V7M24 30v11M12 7h8M28 7h8"/></svg><strong>Тюнер</strong><span>Скоро</span></button>
           </div>
+          <section class="metronome-screen hidden" id="metronome-screen" aria-label="Метроном">
+            <div class="metronome-screen-header"><button class="metronome-back" id="metronome-back" type="button" aria-label="Вернуться к инструментам">‹</button><h3>Метроном</h3><span aria-hidden="true"></span></div>
+            <div class="metronome-bpm"><div class="metronome-bpm-controls"><button class="metronome-step" id="metronome-decrease" type="button" aria-label="Уменьшить BPM"><span class="metronome-step-symbol" aria-hidden="true"></span></button><output id="metronome-bpm-value" aria-live="polite">65</output><button class="metronome-step" id="metronome-increase" type="button" aria-label="Увеличить BPM"><span class="metronome-step-symbol" aria-hidden="true"></span></button></div><span>Ударов в минуту</span></div>
+            <div class="metronome-dial-wrap">
+              <svg class="metronome-dial" id="metronome-dial" viewBox="0 0 320 320" role="slider" aria-label="Темп в ударах в минуту" aria-valuemin="30" aria-valuemax="240" aria-valuenow="65" tabindex="0"><g id="metronome-ticks"></g><g id="metronome-dial-labels"></g><circle class="metronome-dial-marker" id="metronome-dial-marker" cx="0" cy="0" r="13"></circle></svg>
+              <button class="metronome-toggle" id="metronome-toggle" type="button" aria-label="Запустить метроном" aria-pressed="false"><span id="metronome-toggle-icon">▶</span></button>
+            </div>
+            <div class="metronome-beats" id="metronome-beats" aria-label="Доли такта"></div>
+            <div class="metronome-signature"><button id="metronome-signature-button" type="button" aria-haspopup="listbox" aria-expanded="false"><span id="metronome-signature-value">4/4</span></button><span>Размер</span><div class="metronome-signature-sheet hidden" id="metronome-signature-sheet" role="listbox" aria-label="Размер такта"><button type="button" data-time-signature="2/4" role="option">2/4</button><button type="button" data-time-signature="3/4" role="option">3/4</button><button type="button" data-time-signature="4/4" role="option" aria-selected="true">4/4</button><button type="button" data-time-signature="5/4" role="option">5/4</button><button type="button" data-time-signature="6/8" role="option">6/8</button></div></div>
+          </section>
         </section>
         <div class="workspace-grid">
           <section class="calendar-card panel hidden" id="home-calendar">
@@ -235,6 +245,7 @@
       <button class="bottom-nav-item" data-view="chords" type="button"><span class="nav-icon">🎸</span><span>Аккорды</span></button>
     </nav>
   </div>
+  <div id="home-dialog-fallback-backdrop" class="home-dialog-fallback-backdrop hidden" aria-hidden="true"></div>
   <dialog id="home-dialog" class="home-dialog" aria-labelledby="home-dialog-title"><div class="home-dialog-heading"><h2 id="home-dialog-title"></h2><button type="button" class="home-dialog-close" aria-label="Закрыть">×</button></div><div id="home-dialog-content"></div></dialog>
   <div class="mobile-entry-backdrop hidden" id="mobile-entry-backdrop"></div>
   <aside class="debug-panel hidden" id="debug-panel" aria-live="polite"></aside>
@@ -290,5 +301,6 @@
   <script src="backup-utils.js"></script>
   <script src="storage-utils.js"></script>
   <script src="app.js"></script>
+  <script src="metronome.js"></script>
 </body>
 </html>
