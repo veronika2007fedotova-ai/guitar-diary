@@ -787,7 +787,6 @@ el('weekly-goal-modal').addEventListener('click',event=>{ if(event.target.id==='
 el('weekly-goal-form').addEventListener('submit',event=>{ event.preventDefault(); if(!updateWeeklyGoal(el('weekly-goal-editor').value)){ showToast(t('weeklyGoalInvalid')); el('weekly-goal-editor').focus(); return; } closeWeeklyGoalModal(); showToast(t('weeklyGoalUpdated')); });
 el('prev-month').addEventListener('click',()=>{ calendarDate.setMonth(calendarDate.getMonth()-1); renderCalendar(); });
 el('next-month').addEventListener('click',()=>{ calendarDate.setMonth(calendarDate.getMonth()+1); renderCalendar(); });
-el('today-button').addEventListener('click',()=>{ selectedDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()); calendarDate=new Date(now.getFullYear(),now.getMonth(),1); renderCalendar(); renderForm(); openMobileEntry(); });
 el('show-all').addEventListener('click',()=>{ document.querySelector('.recent-section').scrollIntoView({behavior:'smooth'}); });
 document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{ if(btn.dataset.view==='profile') renderProfile(); switchView(btn.dataset.view); }));
 document.querySelectorAll('[data-go-journal]').forEach(btn=>btn.addEventListener('click',()=>switchView('journal')));
