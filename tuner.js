@@ -32,10 +32,12 @@
   let analyser = null;
   let mediaSource = null;
   let mediaStream = null;
+  let mediaStreamPromise = null;
   let analyserBuffer = null;
   let animationFrame = null;
   let active = false;
   let starting = false;
+  let microphoneError = null;
   let frameCounter = 0;
   let lastPitchAt = 0;
   let lastDisplayedFrequency = null;
@@ -301,6 +303,72 @@
     return audioContext;
   }
 
+  function hasLiveAudioTrack(stream) {
+    const tracks = typeof stream?.getAudioTracks === 'function'
+      ? stream.getAudioTracks()
+      : typeof stream?.getTracks === 'function' ? stream.getTracks() : [];
+    return tracks.some(track => track && track.readyState !== 'ended');
+  }
+
+  function setAudioTracksEnabled(stream, enabled) {
+    const tracks = typeof stream?.getAudioTracks === 'function' ? stream.getAudioTracks() : [];
+    tracks.forEach(track => { track.enabled = enabled; });
+  }
+
+  function watchAudioStream(stream) {
+    const tracks = typeof stream?.getAudioTracks === 'function' ? stream.getAudioTracks() : [];
+    tracks.forEach(track => {
+      track.addEventListener?.('ended', () => {
+        if (mediaStream !== stream) return;
+        mediaStream = null;
+        if (active) stopAnalysis();
+        stream.getTracks?.().forEach(otherTrack => {
+          if (otherTrack.readyState !== 'ended') otherTrack.stop();
+        });
+        updateMicrophoneUi();
+      }, { once: true });
+    });
+  }
+
+  function handleAudioDeviceChange() {
+    if (!mediaStream) return;
+    // A devicechange can leave a live track attached to a removed input on
+    // WebKit. Release it so the next explicit start selects the new device.
+    const stream = mediaStream;
+    mediaStream = null;
+    if (active) stopAnalysis();
+    stream.getTracks?.().forEach(track => track.stop());
+    updateMicrophoneUi();
+  }
+
+  // Keep one microphone stream for the lifetime of this WebView session.
+  // The promise also serializes simultaneous taps before getUserMedia resolves.
+  async function getOrCreateAudioStream() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      const error = new Error('Microphone access is unavailable');
+      error.name = 'NotSupportedError';
+      throw error;
+    }
+    if (mediaStream && hasLiveAudioTrack(mediaStream)) return mediaStream;
+    mediaStream = null;
+    if (mediaStreamPromise) return mediaStreamPromise;
+
+    mediaStreamPromise = navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        if (!hasLiveAudioTrack(stream)) {
+          stream.getTracks?.().forEach(track => track.stop());
+          throw new Error('Microphone stream has no live audio track');
+        }
+        mediaStream = stream;
+        watchAudioStream(stream);
+        return stream;
+      })
+      .finally(() => {
+        mediaStreamPromise = null;
+      });
+    return mediaStreamPromise;
+  }
+
   function stopAnalysis() {
     active = false;
     if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
@@ -314,11 +382,19 @@
     }
     analyser = null;
     analyserBuffer = null;
-    if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
-    mediaStream = null;
+    // Stopping analysis is intentionally separate from releasing the stream.
+    // Mute its tracks while keeping the granted stream for the next start.
+    setAudioTracksEnabled(mediaStream, false);
     starting = false;
     resetReadouts();
     updateMicrophoneUi();
+  }
+
+  function disableMicrophone() {
+    stopAnalysis();
+    const stream = mediaStream;
+    mediaStream = null;
+    stream?.getTracks?.().forEach(track => track.stop());
   }
 
   function updateMicrophoneUi() {
@@ -333,51 +409,52 @@
     }
     button.disabled = false;
     button.textContent = active ? text('tunerMicStop', 'Остановить микрофон') : text('tunerMicStart', 'Включить микрофон');
-    status.textContent = active ? text('tunerMicReady', 'Микрофон включён') : text('tunerMicOff', 'Микрофон выключен');
+    status.textContent = active
+      ? text('tunerMicReady', 'Микрофон включён')
+      : microphoneError || text('tunerMicOff', 'Микрофон выключен');
     button.classList.toggle('active', active);
   }
 
   async function requestMicrophoneAccess() {
     if (starting || active) return;
     if (!navigator.mediaDevices?.getUserMedia) {
+      microphoneError = text('tunerMicUnsupported', 'Браузер не поддерживает доступ к микрофону');
       get('tuner-microphone-status').textContent = text('tunerMicUnsupported', 'Браузер не поддерживает доступ к микрофону');
       setGuidance('tuner-guitar-guidance', text('tunerMicUnsupported', 'Браузер не поддерживает доступ к микрофону'), 'error');
       setGuidance('tuner-chromatic-guidance', text('tunerMicUnsupported', 'Браузер не поддерживает доступ к микрофону'), 'error');
       return;
     }
     starting = true;
+    microphoneError = null;
     updateMicrophoneUi();
-    let stream;
     try {
       const context = ensureAudioContext();
-      const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true });
-      streamPromise.catch(() => {});
       if (context.state !== 'running') await context.resume();
       if (context.state !== 'running') throw new Error('AudioContext is not running');
-      stream = await streamPromise;
+      const stream = await getOrCreateAudioStream();
       if (screen.classList.contains('hidden')) {
-        stream.getTracks().forEach(track => track.stop());
         return;
       }
-      mediaStream = stream;
+      setAudioTracksEnabled(stream, true);
       analyser = context.createAnalyser();
       analyser.fftSize = 4096;
       analyser.smoothingTimeConstant = 0.16;
       analyserBuffer = new Float32Array(analyser.fftSize);
-      mediaSource = context.createMediaStreamSource(mediaStream);
+      mediaSource = context.createMediaStreamSource(stream);
       mediaSource.connect(analyser);
       active = true;
+      microphoneError = null;
       frameCounter = 0;
       pitchHistory = [];
       resetReadouts();
       updateMicrophoneUi();
       animationFrame = window.requestAnimationFrame(analyseFrame);
     } catch (error) {
-      if (stream) stream.getTracks().forEach(track => track.stop());
       const denied = error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError';
       const message = denied
         ? text('tunerMicDenied', 'Для работы тюнера нужен доступ к микрофону')
         : text('tunerMicUnavailable', 'Микрофон недоступен на этом устройстве');
+      microphoneError = message;
       get('tuner-microphone-status').textContent = message;
       setGuidance('tuner-guitar-guidance', message, 'error');
       setGuidance('tuner-chromatic-guidance', message, 'error');
@@ -426,7 +503,7 @@
   }
 
   function destroyTuner() {
-    stopAnalysis();
+    disableMicrophone();
     if (audioContext && audioContext.state !== 'closed') {
       const context = audioContext;
       audioContext = null;
@@ -435,7 +512,9 @@
   }
 
   function closeTunerScreen() {
-    destroyTuner();
+    // Closing the panel stops pitch analysis but keeps the granted stream for
+    // a later explicit start in this WebView session.
+    stopAnalysis();
     screen.classList.add('hidden');
     chooser?.classList.remove('hidden');
     dialog?.classList.remove('tuner-mode');
@@ -458,7 +537,8 @@
   fallbackBackdrop?.addEventListener('click', () => { if (!screen.classList.contains('hidden')) closeTunerScreen(); });
   window.addEventListener('guitar-diary-language-change', renderLanguage);
   document.addEventListener('visibilitychange', onVisibilityChange);
-  window.addEventListener('pagehide', stopAnalysis);
+  navigator.mediaDevices?.addEventListener?.('devicechange', handleAudioDeviceChange);
+  window.addEventListener('pagehide', disableMicrophone);
 
   renderLanguage();
   resetReadouts();
@@ -470,6 +550,8 @@
     requestMicrophoneAccess,
     startTuner: requestMicrophoneAccess,
     stopTuner: stopAnalysis,
+    getOrCreateAudioStream,
+    disableMicrophone,
     detectPitch,
     frequencyToNote,
     getCentsOffset: (frequency, targetFrequency) => 1200 * Math.log2(frequency / targetFrequency),
