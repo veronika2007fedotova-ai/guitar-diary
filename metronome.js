@@ -177,6 +177,7 @@
   function createAudioContext() {
     const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextConstructor) return null;
+    if (audioContext?.state === 'closed') audioContext = null;
     if (!audioContext) audioContext = new AudioContextConstructor();
     return audioContext;
   }
@@ -187,7 +188,16 @@
     try {
       const context = createAudioContext();
       if (!context) return;
-      if (context.state === 'suspended') await context.resume();
+      console.log('AudioContext state:', context.state);
+      try {
+        if (context.state === 'suspended' || context.state === 'interrupted') await context.resume();
+      } finally {
+        console.log('AudioContext state:', context.state);
+      }
+      if (context.state !== 'running') {
+        console.warn('Metronome audio is not running.', context.state);
+        return;
+      }
       running = true;
       currentBeat = 0;
       clearIndicatorTimers();
