@@ -82,6 +82,12 @@ html.home-dialog-locked,html.home-dialog-locked body{overflow:hidden;overscroll-
 .metronome-step-symbol::after{display:none}
 #metronome-increase .metronome-step-symbol::after{display:block;width:2px;height:16px}
 
+/* Temporary iOS audio diagnostics. */
+.metronome-debug{display:grid;justify-items:center;gap:6px;width:min(320px,100%);margin:14px auto 0}
+.metronome-debug button{border:1px solid #4a4d56;border-radius:9px;background:#1b1d23;color:#c9cbd2;padding:7px 12px;font:600 10px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;cursor:pointer}
+.metronome-debug button:hover{border-color:var(--orange);color:var(--orange-2)}
+.metronome-debug-output{width:100%;max-height:78px;min-height:14px;overflow:auto;margin:0;color:#767b87;font:9px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:left;white-space:pre-wrap;word-break:break-word}
+
 /* Let the metronome fill its window without an extra scrollbar band. */
 .home-dialog.metronome-mode{border:0}
 .home-dialog.metronome-mode #home-dialog-content{background:var(--bg);overflow:hidden}
